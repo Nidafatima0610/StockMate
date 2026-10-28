@@ -35,6 +35,48 @@ void main() {
       expect(StockStatus.lowStock.label, 'Low Stock');
       expect(StockStatus.outOfStock.label, 'Out of Stock');
     });
+
+    test(
+      'StockStatus boundary values accurately reflect threshold 5 rules',
+      () {
+        // Documented threshold rule:
+        // Quantity == 0: Out of Stock
+        // Quantity > 0 and <= threshold: Low Stock
+        // Quantity > threshold: In Stock
+        const threshold = 5;
+
+        expect(
+          StockStatus.fromQuantity(0, threshold: threshold),
+          StockStatus.outOfStock,
+        );
+        expect(
+          StockStatus.fromQuantity(-5, threshold: threshold),
+          StockStatus.outOfStock,
+        );
+
+        expect(
+          StockStatus.fromQuantity(1, threshold: threshold),
+          StockStatus.lowStock,
+        );
+        expect(
+          StockStatus.fromQuantity(3, threshold: threshold),
+          StockStatus.lowStock,
+        );
+        expect(
+          StockStatus.fromQuantity(5, threshold: threshold),
+          StockStatus.lowStock,
+        );
+
+        expect(
+          StockStatus.fromQuantity(6, threshold: threshold),
+          StockStatus.inStock,
+        );
+        expect(
+          StockStatus.fromQuantity(100, threshold: threshold),
+          StockStatus.inStock,
+        );
+      },
+    );
   });
 
   group('Product model serialization and copyWith unit tests', () {
@@ -773,5 +815,205 @@ void main() {
       expect(find.text('Mechanical Gaming Keyboard'), findsOneWidget);
       expect(find.text('USB-C Multiport Adapter'), findsOneWidget);
     });
+
+    testWidgets(
+      'Editing product name, price, quantity, and category saves changes and updates catalog, badges, and metrics immediately',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // 1. Initial State: Mechanical Gaming Keyboard has qty 3 ($89.50) -> Low Stock
+        expect(find.text('Mechanical Gaming Keyboard'), findsOneWidget);
+        expect(find.text('Low Stock (3)'), findsOneWidget);
+        expect(find.text('\$89.50'), findsOneWidget);
+
+        // 2. Tap to edit using key or card
+        final editTarget = find.byKey(const Key('edit_product_prod-002'));
+        await tester.ensureVisible(editTarget);
+        await tester.pumpAndSettle();
+        await tester.tap(editTarget);
+        await tester.pumpAndSettle();
+
+        // 3. Verify Edit screen is displayed with pre-filled fields
+        expect(find.text('Edit Product'), findsOneWidget);
+        final nameField = find.byKey(const Key('product_name_field'));
+        final categoryField = find.byKey(const Key('product_category_field'));
+        final priceField = find.byKey(const Key('product_price_field'));
+        final quantityField = find.byKey(const Key('product_quantity_field'));
+
+        expect(find.text('Mechanical Gaming Keyboard'), findsOneWidget);
+        expect(find.text('Electronics'), findsOneWidget);
+        expect(find.text('89.50'), findsOneWidget);
+        expect(find.text('3'), findsOneWidget);
+
+        // 4. Edit all fields:
+        // New name: Mechanical Gaming Keyboard RGB Pro
+        // New category: Peripherals
+        // New price: 129.99
+        // New quantity: 15 (15 > 5 -> will transition to In Stock!)
+        await tester.enterText(nameField, 'Mechanical Gaming Keyboard RGB Pro');
+        await tester.enterText(categoryField, 'Peripherals');
+        await tester.ensureVisible(priceField);
+        await tester.pumpAndSettle();
+        await tester.enterText(priceField, '129.99');
+        await tester.ensureVisible(quantityField);
+        await tester.pumpAndSettle();
+        await tester.enterText(quantityField, '15');
+
+        // 5. Save changes
+        final updateBtn = find.byKey(const Key('save_product_button'));
+        await tester.ensureVisible(updateBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(updateBtn);
+        await tester.pumpAndSettle();
+
+        // 6. Verify back on Inventory Dashboard with SnackBar
+        expect(find.text('StockMate'), findsOneWidget);
+        expect(
+          find.text('Mechanical Gaming Keyboard RGB Pro updated!'),
+          findsOneWidget,
+        );
+
+        // 7. Verify updated product row details and auto-generated category filter chip
+        expect(find.text('Mechanical Gaming Keyboard RGB Pro'), findsOneWidget);
+        expect(
+          find.text('Peripherals'),
+          findsNWidgets(2),
+        ); // Category filter chip + product card
+        expect(
+          find.byKey(const Key('category_chip_Peripherals')),
+          findsOneWidget,
+        );
+        expect(find.text('\$129.99'), findsOneWidget);
+        expect(find.text('Qty: 15'), findsOneWidget);
+
+        // 8. Verify stock badge transitioned from Low Stock to In Stock
+        // Mouse (24) and Keyboard (15) are now both In Stock
+        expect(find.text('In Stock'), findsNWidgets(2));
+        // Low Stock count tile is now 0
+        expect(find.text('Low Stock (3)'), findsNothing);
+
+        // 9. Total Valuation updated: (24 * 29.99) + (15 * 129.99) + (0 * 19.00) = 719.76 + 1949.85 = $2669.61
+        expect(find.text('\$2669.61'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Edit product form validation enforces non-empty name, positive price, and non-negative integer quantity',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // Open edit screen for Mouse
+        final mouseRow = find.byKey(const Key('edit_product_prod-001'));
+        await tester.ensureVisible(mouseRow);
+        await tester.pumpAndSettle();
+        await tester.tap(mouseRow);
+        await tester.pumpAndSettle();
+
+        final nameField = find.byKey(const Key('product_name_field'));
+        final priceField = find.byKey(const Key('product_price_field'));
+        final quantityField = find.byKey(const Key('product_quantity_field'));
+        final updateBtn = find.byKey(const Key('save_product_button'));
+
+        // Test 1: Empty name
+        await tester.enterText(nameField, '');
+        await tester.ensureVisible(updateBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(updateBtn);
+        await tester.pumpAndSettle();
+        expect(find.text('Product name cannot be empty'), findsOneWidget);
+
+        // Test 2: Invalid price (0 or negative)
+        await tester.enterText(nameField, 'Valid Mouse Name');
+        await tester.ensureVisible(priceField);
+        await tester.pumpAndSettle();
+        await tester.enterText(priceField, '0');
+        await tester.ensureVisible(updateBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(updateBtn);
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Price must be a valid number greater than zero'),
+          findsOneWidget,
+        );
+
+        // Test 3: Invalid quantity (negative or decimal)
+        await tester.ensureVisible(priceField);
+        await tester.pumpAndSettle();
+        await tester.enterText(priceField, '25.00');
+        await tester.ensureVisible(quantityField);
+        await tester.pumpAndSettle();
+        await tester.enterText(quantityField, '-3');
+        await tester.ensureVisible(updateBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(updateBtn);
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Quantity must be a valid whole number (0 or greater)'),
+          findsOneWidget,
+        );
+
+        await tester.ensureVisible(quantityField);
+        await tester.pumpAndSettle();
+        await tester.enterText(quantityField, '4.8');
+        await tester.ensureVisible(updateBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(updateBtn);
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Quantity must be a valid whole number (0 or greater)'),
+          findsOneWidget,
+        );
+
+        // Verification: Submission prevented, still on Edit screen
+        expect(find.text('Edit Product'), findsOneWidget);
+
+        // Cancel editing
+        final cancelBtn = find.byKey(const Key('cancel_product_button'));
+        await tester.ensureVisible(cancelBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(cancelBtn);
+        await tester.pumpAndSettle();
+
+        // Original values preserved
+        expect(find.text('Wireless Ergonomic Mouse'), findsOneWidget);
+        expect(find.text('Qty: 24'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Editing product quantity to 0 updates status to Out of Stock and increments Out of Stock count',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // Edit Mouse (qty 24) to qty 0
+        final mouseRow = find.byKey(const Key('edit_product_prod-001'));
+        await tester.ensureVisible(mouseRow);
+        await tester.pumpAndSettle();
+        await tester.tap(mouseRow);
+        await tester.pumpAndSettle();
+
+        final quantityField = find.byKey(const Key('product_quantity_field'));
+        await tester.ensureVisible(quantityField);
+        await tester.pumpAndSettle();
+        await tester.enterText(quantityField, '0');
+
+        final updateBtn = find.byKey(const Key('save_product_button'));
+        await tester.ensureVisible(updateBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(updateBtn);
+        await tester.pumpAndSettle();
+
+        // Mouse is now Out of Stock
+        expect(find.text('Wireless Ergonomic Mouse updated!'), findsOneWidget);
+        // Adapter and Mouse are now both Out of Stock
+        expect(
+          find.text('Out of Stock'),
+          findsNWidgets(4),
+        ); // Header metric + chips + badges
+      },
+    );
   });
 }

@@ -377,6 +377,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
                 // Secondary Cancel button
                 OutlinedButton(
+                  key: const Key('cancel_product_button'),
                   onPressed: () => Navigator.pop(context),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF5B2EBC),

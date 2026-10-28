@@ -1533,6 +1533,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        key: Key('edit_product_${product.id}'),
         onTap: () => _navigateToEditProduct(product),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
@@ -1623,16 +1624,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      InkWell(
-                        key: Key('delete_product_${product.id}'),
-                        borderRadius: BorderRadius.circular(6),
-                        onTap: () => _confirmDeleteProduct(product),
-                        child: const Padding(
-                          padding: EdgeInsets.all(4),
-                          child: Icon(
-                            Icons.delete_outline_rounded,
-                            size: 16,
-                            color: Color(0xFF9E9CAF),
+                      Tooltip(
+                        message: 'Delete product',
+                        child: InkWell(
+                          key: Key('delete_product_${product.id}'),
+                          borderRadius: BorderRadius.circular(6),
+                          onTap: () => _confirmDeleteProduct(product),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.delete_outline_rounded,
+                              size: 16,
+                              color: Color(0xFF9E9CAF),
+                            ),
                           ),
                         ),
                       ),
@@ -1672,22 +1676,25 @@ class _InventoryScreenState extends State<InventoryScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Decrement (-) button
-          InkWell(
-            key: Key('decrement_qty_${product.id}'),
-            borderRadius: const BorderRadius.horizontal(
-              left: Radius.circular(7),
-            ),
-            onTap: canDecrement ? () => _decrementQuantity(product) : () {},
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              child: Icon(
-                Icons.remove_rounded,
-                size: 15,
-                color: canDecrement
-                    ? (product.quantity == 0
-                          ? const Color(0xFFC02626)
-                          : const Color(0xFF5B2EBC))
-                    : const Color(0xFFBDBBC8),
+          Tooltip(
+            message: 'Decrease quantity',
+            child: InkWell(
+              key: Key('decrement_qty_${product.id}'),
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(7),
+              ),
+              onTap: canDecrement ? () => _decrementQuantity(product) : () {},
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                child: Icon(
+                  Icons.remove_rounded,
+                  size: 15,
+                  color: canDecrement
+                      ? (product.quantity == 0
+                            ? const Color(0xFFC02626)
+                            : const Color(0xFF5B2EBC))
+                      : const Color(0xFFBDBBC8),
+                ),
               ),
             ),
           ),
@@ -1707,18 +1714,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
           ),
           // Increment (+) button
-          InkWell(
-            key: Key('increment_qty_${product.id}'),
-            borderRadius: const BorderRadius.horizontal(
-              right: Radius.circular(7),
-            ),
-            onTap: () => _incrementQuantity(product),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              child: Icon(
-                Icons.add_rounded,
-                size: 15,
-                color: Color(0xFF5B2EBC),
+          Tooltip(
+            message: 'Increase quantity',
+            child: InkWell(
+              key: Key('increment_qty_${product.id}'),
+              borderRadius: const BorderRadius.horizontal(
+                right: Radius.circular(7),
+              ),
+              onTap: () => _incrementQuantity(product),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                child: Icon(
+                  Icons.add_rounded,
+                  size: 15,
+                  color: Color(0xFF5B2EBC),
+                ),
               ),
             ),
           ),

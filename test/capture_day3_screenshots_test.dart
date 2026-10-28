@@ -127,5 +127,56 @@ void main() {
         '../submission_evidence/day3/05_delete_undo_snackbar.png',
       ),
     );
+
+    // Restore deleted item via UNDO
+    final undoButton = find.text('UNDO');
+    if (undoButton.evaluate().isNotEmpty) {
+      await tester.tap(undoButton);
+      await tester.pumpAndSettle();
+    }
+
+    // 6. Edit Product Flow: Navigate to edit screen for Mechanical Gaming Keyboard
+    final editTarget = find.byKey(const Key('edit_product_prod-002'));
+    await tester.ensureVisible(editTarget);
+    await tester.pumpAndSettle();
+    await tester.tap(editTarget);
+    await tester.pumpAndSettle();
+
+    // Evidence 6: Edit Product screen pre-filled with existing product details
+    await expectLater(
+      find.byType(StockMateApp),
+      matchesGoldenFile('../submission_evidence/day3/06_edit_product_flow.png'),
+    );
+
+    // Cancel edit to return to Dashboard
+    final cancelEdit = find.byKey(const Key('cancel_product_button'));
+    await tester.ensureVisible(cancelEdit);
+    await tester.pumpAndSettle();
+    await tester.tap(cancelEdit);
+    await tester.pumpAndSettle();
+
+    // 7. Stock Quantity Updates: Quick stepper (+) button on Mechanical Gaming Keyboard
+    final incrementBtn = find.byKey(const Key('increment_qty_prod-002'));
+    await tester.ensureVisible(incrementBtn);
+    await tester.pumpAndSettle();
+    await tester.tap(incrementBtn);
+    await tester.pumpAndSettle();
+
+    // Evidence 7: Updated quantity stepper (Qty: 4), recalculating valuation and badge
+    await expectLater(
+      find.byType(StockMateApp),
+      matchesGoldenFile(
+        '../submission_evidence/day3/07_stock_quantity_update_stepper.png',
+      ),
+    );
+
+    // 8. Low and Out-of-Stock States: Clear display of In Stock, Low Stock, and Out of Stock items
+    // Evidence 8: Catalog showcasing all three stock status states (In Stock, Low Stock, Out of Stock)
+    await expectLater(
+      find.byType(StockMateApp),
+      matchesGoldenFile(
+        '../submission_evidence/day3/08_low_and_out_of_stock_states.png',
+      ),
+    );
   });
 }
