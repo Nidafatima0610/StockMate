@@ -9,8 +9,13 @@ import '../models/product.dart';
 /// will be connected in subsequent milestones.
 class AddEditProductScreen extends StatefulWidget {
   final Product? product;
+  final int lowStockThreshold;
 
-  const AddEditProductScreen({super.key, this.product});
+  const AddEditProductScreen({
+    super.key,
+    this.product,
+    this.lowStockThreshold = kDefaultLowStockThreshold,
+  });
 
   @override
   State<AddEditProductScreen> createState() => _AddEditProductScreenState();
@@ -52,39 +57,65 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     super.dispose();
   }
 
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
+
+  String? _validateName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Product name cannot be empty';
+    }
+    return null;
+  }
+
+  String? _validatePrice(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Price cannot be empty';
+    }
+    final price = double.tryParse(value.trim());
+    if (price == null || price <= 0) {
+      return 'Price must be a valid number greater than zero';
+    }
+    return null;
+  }
+
+  String? _validateQuantity(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Quantity cannot be empty';
+    }
+    final quantity = int.tryParse(value.trim());
+    if (quantity == null || quantity < 0) {
+      return 'Quantity must be a valid whole number (0 or greater)';
+    }
+    return null;
+  }
+
   void _handleSave() {
-    // Week 1 Day 1 prototype milestone feedback
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.check_circle_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                _isEditing
-                    ? 'Product form layout ready! Update logic will be wired in Day 2.'
-                    : 'Product form layout ready! Save logic will be wired in Day 2.',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFF5B2EBC),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
-      ),
+    // Validate all form fields; if invalid, activate inline validation feedback
+    if (!_formKey.currentState!.validate()) {
+      setState(() {
+        _autovalidateMode = AutovalidateMode.onUserInteraction;
+      });
+      return;
+    }
+
+    final name = _nameController.text.trim();
+    final rawCategory = _categoryController.text.trim();
+    final category = rawCategory.isEmpty ? 'General' : rawCategory;
+    final price = double.parse(_priceController.text.trim());
+    final quantity = int.parse(_quantityController.text.trim());
+
+    // Create or update the product model with a clean, readable ID
+    final idSuffix = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final cleanId = idSuffix.length > 8 ? idSuffix.substring(0, 8) : idSuffix;
+    final product = Product(
+      id: widget.product?.id ?? 'prod-$cleanId',
+      name: name,
+      price: price,
+      quantity: quantity,
+      category: category,
     );
 
-    Navigator.pop(context);
+    // Return the new/updated product back to the inventory screen
+    Navigator.pop(context, product);
   }
 
   @override
@@ -118,6 +149,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
           child: Form(
             key: _formKey,
+            autovalidateMode: _autovalidateMode,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -149,25 +181,31 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
-                            children: [
-                              Icon(
-                                Icons.feed_outlined,
-                                size: 18,
-                                color: Color(0xFF5B2EBC),
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Product Information',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF161324),
-                                  letterSpacing: -0.2,
+                          const Expanded(
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.feed_outlined,
+                                  size: 18,
+                                  color: Color(0xFF5B2EBC),
                                 ),
-                              ),
-                            ],
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Product Information',
+                                    style: TextStyle(
+                                      fontSize: 15.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF161324),
+                                      letterSpacing: -0.2,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -192,15 +230,18 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
                       // Product Name field
                       _buildTextField(
+                        fieldKey: const Key('product_name_field'),
                         controller: _nameController,
                         label: 'Product Name',
                         hint: 'e.g., Wireless Ergonomic Mouse',
                         icon: Icons.inventory_2_outlined,
+                        validator: _validateName,
                       ),
                       const SizedBox(height: 16),
 
-                      // Category field
+                      // Category field (Optional)
                       _buildTextField(
+                        fieldKey: const Key('product_category_field'),
                         controller: _categoryController,
                         label: 'Category',
                         hint: 'e.g., Electronics, Accessories, Office',
@@ -210,6 +251,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
                       // Price field
                       _buildTextField(
+                        fieldKey: const Key('product_price_field'),
                         controller: _priceController,
                         label: 'Price (\$)',
                         hint: 'e.g., 29.99',
@@ -217,16 +259,19 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
+                        validator: _validatePrice,
                       ),
                       const SizedBox(height: 16),
 
                       // Quantity field
                       _buildTextField(
+                        fieldKey: const Key('product_quantity_field'),
                         controller: _quantityController,
                         label: 'Quantity in Stock',
                         hint: 'e.g., 25',
                         icon: Icons.numbers_rounded,
                         keyboardType: TextInputType.number,
+                        validator: _validateQuantity,
                       ),
                     ],
                   ),
@@ -277,7 +322,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Quantities ≤ $kLowStockThreshold display an amber Low Stock badge. Products with 0 units display a red Out of Stock badge.',
+                              'Quantities ≤ ${widget.lowStockThreshold} display an amber Low Stock badge. Products with 0 units display a red Out of Stock badge.',
                               style: const TextStyle(
                                 fontSize: 11.5,
                                 color: Color(0xFF5B5875),
@@ -294,6 +339,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
                 // Primary Save / Update button
                 ElevatedButton(
+                  key: const Key('save_product_button'),
                   onPressed: _handleSave,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF5B2EBC),
@@ -425,11 +471,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
   /// Consistent, accessible form field component.
   Widget _buildTextField({
+    Key? fieldKey,
     required TextEditingController controller,
     required String label,
     required String hint,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,8 +493,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         ),
         const SizedBox(height: 6),
         TextFormField(
+          key: fieldKey,
           controller: controller,
           keyboardType: keyboardType,
+          validator: validator,
           style: const TextStyle(
             fontSize: 14.5,
             color: Color(0xFF161324),
@@ -480,6 +530,25 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 color: Color(0xFF5B2EBC),
                 width: 1.6,
               ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(11),
+              borderSide: const BorderSide(
+                color: Color(0xFFD32F2F),
+                width: 1.2,
+              ),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(11),
+              borderSide: const BorderSide(
+                color: Color(0xFFD32F2F),
+                width: 1.6,
+              ),
+            ),
+            errorStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFFD32F2F),
             ),
           ),
         ),
