@@ -141,12 +141,22 @@ class Product {
 
   /// Deserializes a JSON map into a Product instance with safe type defaults.
   factory Product.fromJson(Map<String, dynamic> json) {
+    final rawPrice = json['price'];
+    final double price = rawPrice is num
+        ? rawPrice.toDouble()
+        : (double.tryParse(rawPrice?.toString() ?? '') ?? 0.0);
+
+    final rawQuantity = json['quantity'];
+    final int quantity = rawQuantity is num
+        ? rawQuantity.toInt()
+        : (int.tryParse(rawQuantity?.toString() ?? '') ?? 0);
+
     return Product(
-      id: json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
-      category: json['category'] as String? ?? 'General',
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      price: price > 0 ? price : 0.0,
+      quantity: quantity >= 0 ? quantity : 0,
+      category: json['category']?.toString() ?? 'General',
     );
   }
 

@@ -616,4 +616,346 @@ void main() {
       expect(find.text('Threshold: ≤ 15'), findsOneWidget);
     });
   });
+
+  group('Day 4 Official Requirements Tests — Local Storage & Persistent Inventory', () {
+    testWidgets(
+      'Restores multiple custom products after app restart without re-seeding demo data',
+      (WidgetTester tester) async {
+        final storage = const InventoryStorage();
+        final customInventory = [
+          const Product(
+            id: 'c-101',
+            name: 'Dual Monitor Arm',
+            price: 79.99,
+            quantity: 8,
+            category: 'Desk Setup',
+          ),
+          const Product(
+            id: 'c-102',
+            name: 'LED Desk Lamp',
+            price: 34.50,
+            quantity: 2,
+            category: 'Lighting',
+          ),
+        ];
+
+        // Pre-populate storage with custom inventory
+        await storage.saveProducts(customInventory);
+
+        // Launch app
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // 1. Verify custom products are restored
+        expect(find.text('Dual Monitor Arm'), findsOneWidget);
+        expect(find.text('LED Desk Lamp'), findsOneWidget);
+        expect(find.text('\$79.99'), findsOneWidget);
+        expect(find.text('\$34.50'), findsOneWidget);
+
+        // 2. Verify demo products were NOT re-seeded
+        expect(find.text('Wireless Ergonomic Mouse'), findsNothing);
+        expect(find.text('Mechanical Gaming Keyboard'), findsNothing);
+        expect(find.text('USB-C Multiport Adapter'), findsNothing);
+
+        // 3. Verify metrics correspond to custom inventory:
+        // Total: 2, Low Stock: 1 (Lamp qty 2 <= 5), Out of Stock: 0
+        expect(find.text('Products (2)'), findsOneWidget);
+        expect(find.text('In Stock'), findsOneWidget);
+        expect(find.text('Low Stock (2)'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Add, edit, delete, and quantity changes survive simulated app restart',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(412 * 2.0, 915 * 2.0);
+        tester.view.devicePixelRatio = 2.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        // 1. Initial Launch
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // A. Add a new product
+        await tester.tap(find.byTooltip('Add Product'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('product_name_field')),
+          'Studio Headphones',
+        );
+        await tester.enterText(
+          find.byKey(const Key('product_category_field')),
+          'Audio',
+        );
+        await tester.enterText(
+          find.byKey(const Key('product_price_field')),
+          '149.99',
+        );
+        await tester.enterText(
+          find.byKey(const Key('product_quantity_field')),
+          '6',
+        );
+
+        final saveBtn = find.byKey(const Key('save_product_button'));
+        await tester.ensureVisible(saveBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(saveBtn);
+        await tester.pumpAndSettle();
+
+        // B. Increment Mouse quantity
+        final incMouse = find.byKey(const Key('increment_qty_prod-001'));
+        await tester.ensureVisible(incMouse);
+        await tester.pumpAndSettle();
+        await tester.tap(incMouse);
+        await tester.pumpAndSettle(); // 24 -> 25
+
+        // C. Delete USB-C Adapter
+        final delAdapter = find.byKey(const Key('delete_product_prod-003'));
+        await tester.ensureVisible(delAdapter);
+        await tester.pumpAndSettle();
+        await tester.tap(delAdapter);
+        await tester.pumpAndSettle();
+
+        final confirmDelete = find.widgetWithText(ElevatedButton, 'Delete');
+        await tester.tap(confirmDelete);
+        await tester.pumpAndSettle();
+
+        // D. Edit Keyboard price to 99.00
+        final editKb = find.byKey(const Key('edit_product_prod-002'));
+        await tester.ensureVisible(editKb);
+        await tester.pumpAndSettle();
+        await tester.tap(editKb);
+        await tester.pumpAndSettle();
+
+        final priceField = find.byKey(const Key('product_price_field'));
+        await tester.ensureVisible(priceField);
+        await tester.pumpAndSettle();
+        await tester.enterText(priceField, '99.00');
+
+        final updateBtn = find.byKey(const Key('save_product_button'));
+        await tester.ensureVisible(updateBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(updateBtn);
+        await tester.pumpAndSettle();
+
+        // 2. SIMULATE APP RESTART by pumping a brand new StockMateApp instance
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // 3. Verify all changes survived the restart!
+        // - Newly added product exists
+        expect(find.text('Studio Headphones'), findsOneWidget);
+        expect(find.text('\$149.99'), findsOneWidget);
+        expect(find.text('Qty: 6'), findsOneWidget);
+
+        // - Increment survived
+        expect(find.text('Qty: 25'), findsOneWidget);
+
+        // - Edit survived
+        expect(find.text('\$99.00'), findsOneWidget);
+
+        // - Deletion survived
+        expect(find.text('USB-C Multiport Adapter'), findsNothing);
+
+        // Total products count is 3 (Mouse, Keyboard, Headphones)
+        expect(find.text('Products (3)'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Empty inventory correctly preserved across restarts and Add First Product works',
+      (WidgetTester tester) async {
+        const storage = InventoryStorage();
+        // User previously cleared out all items
+        await storage.saveProducts([]);
+
+        // Launch app with empty saved inventory
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // 1. Verify thoughtful empty state is shown, NOT sample products
+        expect(find.text('No Products in Catalog'), findsOneWidget);
+        expect(find.text('Add First Product'), findsOneWidget);
+        expect(find.text('Wireless Ergonomic Mouse'), findsNothing);
+        expect(find.text('Mechanical Gaming Keyboard'), findsNothing);
+
+        // 2. Tap 'Add First Product' button in empty state
+        final addFirstBtn = find.byKey(const Key('empty_add_product_button'));
+        expect(addFirstBtn, findsOneWidget);
+        await tester.ensureVisible(addFirstBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(addFirstBtn);
+        await tester.pumpAndSettle();
+
+        // Verify navigated to Add Product screen
+        expect(find.text('Add New Product'), findsOneWidget);
+
+        // Register first product
+        await tester.enterText(
+          find.byKey(const Key('product_name_field')),
+          'Smart Wireless Thermostat',
+        );
+        await tester.enterText(
+          find.byKey(const Key('product_category_field')),
+          'Smart Home',
+        );
+        await tester.enterText(
+          find.byKey(const Key('product_price_field')),
+          '129.00',
+        );
+        await tester.enterText(
+          find.byKey(const Key('product_quantity_field')),
+          '10',
+        );
+
+        final saveBtn = find.byKey(const Key('save_product_button'));
+        await tester.ensureVisible(saveBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(saveBtn);
+        await tester.pumpAndSettle();
+
+        // 3. Empty state is replaced with active product catalog
+        expect(find.text('No Products in Catalog'), findsNothing);
+        expect(find.text('Smart Wireless Thermostat'), findsOneWidget);
+        expect(find.text('Products (1)'), findsOneWidget);
+
+        // 4. Restart app and verify single product remains
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        expect(find.text('Smart Wireless Thermostat'), findsOneWidget);
+        expect(find.text('Products (1)'), findsOneWidget);
+      },
+    );
+
+    test('Malformed stored data handled safely without app crash', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      const storage = InventoryStorage();
+
+      // Case 1: Corrupted JSON syntax string
+      await prefs.setBool('stockmate_has_initialized', true);
+      await prefs.setString(
+        'stockmate_products_catalog',
+        '{corrupted_json_syntax',
+      );
+      final fallbackProducts = await storage.loadProducts();
+      // Safely falls back without throwing FormatException
+      expect(fallbackProducts.isNotEmpty, isTrue);
+
+      // Case 2: Stored JSON is a JSON Map instead of a List
+      await prefs.setString(
+        'stockmate_products_catalog',
+        '{"error": "server_synced_object", "code": 500}',
+      );
+      final emptyFallback = await storage.loadProducts();
+      expect(emptyFallback, isEmpty);
+
+      // Case 3: List containing corrupted, null, and weird type items
+      await prefs.setString(
+        'stockmate_products_catalog',
+        '[{"id": "p-valid", "name": "Valid Cable", "price": "14.99", "quantity": -5}, null, "corrupt string", 42]',
+      );
+      final parsedList = await storage.loadProducts();
+      // Gracefully extracts the valid item, ignores corrupt elements
+      expect(parsedList.length, 1);
+      final item = parsedList.first;
+      expect(item.id, 'p-valid');
+      expect(item.name, 'Valid Cable');
+      expect(item.price, 14.99);
+      // Strictly prevents negative quantities (clamped to 0)
+      expect(item.quantity, 0);
+      expect(item.stockStatus, StockStatus.outOfStock);
+    });
+
+    testWidgets(
+      'App renders safely on smaller mobile screens without overflow',
+      (WidgetTester tester) async {
+        // Emulate small compact phone (320 x 568 - iPhone SE 1st gen / compact Android)
+        tester.view.physicalSize = const Size(320 * 2.0, 568 * 2.0);
+        tester.view.devicePixelRatio = 2.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // Verify dashboard renders cleanly
+        expect(find.text('StockMate'), findsOneWidget);
+        expect(find.text('Products (3)'), findsOneWidget);
+
+        // Open Add Product form on small screen
+        await tester.tap(find.byTooltip('Add Product'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Add New Product'), findsOneWidget);
+
+        // Verify form scrolls cleanly to Cancel button on small screen
+        final cancelBtn = find.byKey(const Key('cancel_product_button'));
+        await tester.ensureVisible(cancelBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(cancelBtn);
+        await tester.pumpAndSettle();
+
+        expect(find.text('StockMate'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Multiple consecutive actions preserve consistent counts and persistence',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(412 * 2.0, 915 * 2.0);
+        tester.view.devicePixelRatio = 2.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // Step 1: Increment Mouse 3 times (24 -> 27)
+        final incMouse = find.byKey(const Key('increment_qty_prod-001'));
+        await tester.ensureVisible(incMouse);
+        await tester.pumpAndSettle();
+        await tester.tap(incMouse);
+        await tester.pumpAndSettle();
+        await tester.tap(incMouse);
+        await tester.pumpAndSettle();
+        await tester.tap(incMouse);
+        await tester.pumpAndSettle();
+        expect(find.text('Qty: 27'), findsOneWidget);
+
+        // Step 2: Decrement Adapter at 0 (safe no-op)
+        final decAdapter = find.byKey(const Key('decrement_qty_prod-003'));
+        await tester.ensureVisible(decAdapter);
+        await tester.pumpAndSettle();
+        await tester.tap(decAdapter);
+        await tester.pumpAndSettle();
+        expect(find.text('Qty: 0'), findsOneWidget);
+
+        // Step 3: Delete Mechanical Keyboard then UNDO
+        final delKb = find.byKey(const Key('delete_product_prod-002'));
+        await tester.ensureVisible(delKb);
+        await tester.pumpAndSettle();
+        await tester.tap(delKb);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
+        await tester.pumpAndSettle();
+        expect(find.text('Products (2)'), findsOneWidget);
+
+        await tester.tap(find.text('UNDO'));
+        await tester.pumpAndSettle();
+        expect(find.text('Products (3)'), findsOneWidget);
+
+        // Verify storage reflects exact state
+        final storage = const InventoryStorage();
+        final products = await storage.loadProducts();
+        expect(products.length, 3);
+        final mouse = products.firstWhere((p) => p.id == 'prod-001');
+        expect(mouse.quantity, 27);
+      },
+    );
+  });
 }

@@ -151,5 +151,75 @@ void main() {
         '../submission_evidence/day4/05_deleted_product_in_history.png',
       ),
     );
+
+    // Return to dashboard
+    await tester.tap(find.byKey(const Key('history_back_button')));
+    await tester.pumpAndSettle();
+
+    // 6. Delete remaining products to show empty inventory state
+    for (final id in ['prod-001', 'prod-003', 'prod-004']) {
+      final delBtn = find.byKey(Key('delete_product_$id'));
+      if (delBtn.evaluate().isNotEmpty) {
+        await tester.ensureVisible(delBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(delBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
+        await tester.pumpAndSettle();
+      }
+    }
+
+    // Evidence 6: Clean, informative empty inventory state with Add First Product button
+    await expectLater(
+      find.byType(StockMateApp),
+      matchesGoldenFile(
+        '../submission_evidence/day4/06_empty_inventory_state.png',
+      ),
+    );
+
+    // 7. Add a real product from empty state, then simulate app restart
+    final addFirstBtn = find.byKey(const Key('empty_add_product_button'));
+    await tester.ensureVisible(addFirstBtn);
+    await tester.pumpAndSettle();
+    await tester.tap(addFirstBtn);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('product_name_field')),
+      'Wireless Barcode Scanner',
+    );
+    await tester.enterText(
+      find.byKey(const Key('product_category_field')),
+      'POS Equipment',
+    );
+    await tester.enterText(
+      find.byKey(const Key('product_price_field')),
+      '149.99',
+    );
+    await tester.enterText(
+      find.byKey(const Key('product_quantity_field')),
+      '12',
+    );
+
+    final saveBtn = find.byKey(const Key('save_product_button'));
+    await tester.ensureVisible(saveBtn);
+    await tester.pumpAndSettle();
+    await tester.tap(saveBtn);
+    await tester.pumpAndSettle();
+
+    // Simulate App Restart by destroying widget tree and re-mounting StockMateApp
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(const StockMateApp());
+    await tester.pumpAndSettle();
+
+    // Evidence 7: Restored custom inventory after restart without sample data overwrite
+    await expectLater(
+      find.byType(StockMateApp),
+      matchesGoldenFile(
+        '../submission_evidence/day4/07_restored_inventory_after_restart.png',
+      ),
+    );
   });
 }

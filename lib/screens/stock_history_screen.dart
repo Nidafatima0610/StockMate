@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/stock_movement.dart';
+import '../theme/app_theme.dart';
 
 /// Screen displaying the chronological audit trail of all inventory quantity adjustments.
 ///
@@ -142,129 +143,137 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Controls header: Search bar and Movement Type Filter chips
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: const Border(
-                  bottom: BorderSide(color: Color(0xFFEAEAEE), width: 1.1),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF1B1829).withValues(alpha: 0.02),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Search input
-                  Container(
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF7F7FC),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFFE2E2EA),
-                        width: 1,
-                      ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 820),
+            child: Column(
+              children: [
+                // Controls header: Search bar and Movement Type Filter chips
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: const Border(
+                      bottom: BorderSide(color: Color(0xFFEAEAEE), width: 1.1),
                     ),
-                    child: TextField(
-                      controller: _searchController,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        color: Color(0xFF1B1829),
-                        fontWeight: FontWeight.w500,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Search by product name or ID...',
-                        hintStyle: const TextStyle(
-                          fontSize: 12.5,
-                          color: Color(0xFF9E9CAF),
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.search_rounded,
-                          color: Color(0xFF5B2EBC),
-                          size: 18,
-                        ),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(
-                                  Icons.clear_rounded,
-                                  size: 16,
-                                  color: Color(0xFF7E7B92),
-                                ),
-                                onPressed: () => _searchController.clear(),
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: 8,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // Filter chips
-                  Row(
-                    children: [
-                      _buildTypeFilterChip(
-                        label: 'All',
-                        type: null,
-                        count: widget.movements.length,
-                      ),
-                      const SizedBox(width: 8),
-                      _buildTypeFilterChip(
-                        label: 'Stock In',
-                        type: StockMovementType.increase,
-                        count: widget.movements
-                            .where(
-                              (m) =>
-                                  m.movementType == StockMovementType.increase,
-                            )
-                            .length,
-                        activeColor: const Color(0xFF0F764C),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildTypeFilterChip(
-                        label: 'Stock Out',
-                        type: StockMovementType.decrease,
-                        count: widget.movements
-                            .where(
-                              (m) =>
-                                  m.movementType == StockMovementType.decrease,
-                            )
-                            .length,
-                        activeColor: const Color(0xFFC02626),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1B1829).withValues(alpha: 0.02),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-
-            // Movements list or empty state
-            Expanded(
-              child: filtered.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
+                  child: Column(
+                    children: [
+                      // Search input
+                      Container(
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF7F7FC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFFE2E2EA),
+                            width: 1,
+                          ),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            color: Color(0xFF1B1829),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Search by product name or ID...',
+                            hintStyle: const TextStyle(
+                              fontSize: 12.5,
+                              color: Color(0xFF9E9CAF),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.search_rounded,
+                              color: Color(0xFF5B2EBC),
+                              size: 18,
+                            ),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(
+                                      Icons.clear_rounded,
+                                      size: 16,
+                                      color: Color(0xFF7E7B92),
+                                    ),
+                                    onPressed: () => _searchController.clear(),
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                              horizontal: 8,
+                            ),
+                          ),
+                        ),
                       ),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        return _buildMovementCard(filtered[index]);
-                      },
-                    ),
+                      const SizedBox(height: 10),
+                      // Filter chips
+                      Row(
+                        children: [
+                          _buildTypeFilterChip(
+                            label: 'All',
+                            type: null,
+                            count: widget.movements.length,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildTypeFilterChip(
+                            label: 'Stock In',
+                            type: StockMovementType.increase,
+                            count: widget.movements
+                                .where(
+                                  (m) =>
+                                      m.movementType ==
+                                      StockMovementType.increase,
+                                )
+                                .length,
+                            activeColor: const Color(0xFF0F764C),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildTypeFilterChip(
+                            label: 'Stock Out',
+                            type: StockMovementType.decrease,
+                            count: widget.movements
+                                .where(
+                                  (m) =>
+                                      m.movementType ==
+                                      StockMovementType.decrease,
+                                )
+                                .length,
+                            activeColor: const Color(0xFFC02626),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Movements list or empty state
+                Expanded(
+                  child: filtered.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            return _buildMovementCard(filtered[index]);
+                          },
+                        ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -375,15 +384,9 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFEAEAEE), width: 1.1),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1B1829).withValues(alpha: 0.025),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border, width: 1.1),
+        boxShadow: AppTheme.cardShadow,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(

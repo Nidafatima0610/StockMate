@@ -145,262 +145,274 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         elevation: 0,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
-          child: Form(
-            key: _formKey,
-            autovalidateMode: _autovalidateMode,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Contextual Hero Banner
-                _buildHeroBanner(),
-                const SizedBox(height: 18),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18.0,
+                vertical: 16.0,
+              ),
+              child: Form(
+                key: _formKey,
+                autovalidateMode: _autovalidateMode,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Contextual Hero Banner
+                    _buildHeroBanner(),
+                    const SizedBox(height: 14),
 
-                // Form card container
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF161324).withValues(alpha: 0.04),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+                    // Form card container
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF161324)
+                                .withValues(alpha: 0.04),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: const Color(0xFFEAEAEE),
+                          width: 1.2,
+                        ),
                       ),
-                    ],
-                    border: Border.all(
-                      color: const Color(0xFFEAEAEE),
-                      width: 1.2,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Expanded(
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.feed_outlined,
-                                  size: 18,
-                                  color: Color(0xFF5B2EBC),
-                                ),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Product Information',
-                                    style: TextStyle(
-                                      fontSize: 15.5,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF161324),
-                                      letterSpacing: -0.2,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Expanded(
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.feed_outlined,
+                                      size: 18,
+                                      color: Color(0xFF5B2EBC),
                                     ),
-                                    overflow: TextOverflow.ellipsis,
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Product Information',
+                                        style: TextStyle(
+                                          fontSize: 15.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF161324),
+                                          letterSpacing: -0.2,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF3F2F8),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'Catalog Details',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF6B687E),
                                   ),
                                 ),
-                              ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+
+                          // Product Name field
+                          _buildTextField(
+                            fieldKey: const Key('product_name_field'),
+                            controller: _nameController,
+                            label: 'Product Name',
+                            hint: 'e.g., Wireless Ergonomic Mouse',
+                            icon: Icons.inventory_2_outlined,
+                            validator: _validateName,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Category field (Optional)
+                          _buildTextField(
+                            fieldKey: const Key('product_category_field'),
+                            controller: _categoryController,
+                            label: 'Category',
+                            hint: 'e.g., Electronics, Accessories, Office',
+                            icon: Icons.category_outlined,
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Quick Category Suggestion Chips
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children:
+                                [
+                                  '+ Electronics',
+                                  '+ Accessories',
+                                  '+ Office',
+                                  '+ Peripherals',
+                                ].map((suggestion) {
+                                  final catName = suggestion
+                                      .replaceAll('+', '')
+                                      .trim();
+                                  final isSelected =
+                                      _categoryController.text
+                                          .trim()
+                                          .toLowerCase() ==
+                                      catName.toLowerCase();
+                                  return InkWell(
+                                    borderRadius: BorderRadius.circular(8),
+                                    onTap: () {
+                                      setState(() {
+                                        _categoryController.text = catName;
+                                      });
+                                    },
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 150,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 9,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? const Color(0xFF5B2EBC)
+                                            : const Color(0xFFF3EFFF),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? const Color(0xFF5B2EBC)
+                                              : const Color(0xFFE5DCFD),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        suggestion,
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : const Color(0xFF5B2EBC),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Price field
+                          _buildTextField(
+                            fieldKey: const Key('product_price_field'),
+                            controller: _priceController,
+                            label: 'Price (\$)',
+                            hint: 'e.g., 29.99',
+                            icon: Icons.attach_money_rounded,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
                             ),
+                            validator: _validatePrice,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Quantity field
+                          _buildTextField(
+                            fieldKey: const Key('product_quantity_field'),
+                            controller: _quantityController,
+                            label: 'Quantity in Stock',
+                            hint: 'e.g., 25',
+                            icon: Icons.numbers_rounded,
+                            keyboardType: TextInputType.number,
+                            validator: _validateQuantity,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Primary Save / Update button
+                    ElevatedButton(
+                      key: const Key('save_product_button'),
+                      onPressed: _handleSave,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5B2EBC),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        elevation: 2,
+                        shadowColor: const Color(0xFF5B2EBC)
+                            .withValues(alpha: 0.35),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 20,
                           ),
                           const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF3F2F8),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'Catalog Details',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF6B687E),
-                              ),
+                          Text(
+                            _isEditing ? 'Update Product' : 'Save Product',
+                            style: const TextStyle(
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 0.1,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
-
-                      // Product Name field
-                      _buildTextField(
-                        fieldKey: const Key('product_name_field'),
-                        controller: _nameController,
-                        label: 'Product Name',
-                        hint: 'e.g., Wireless Ergonomic Mouse',
-                        icon: Icons.inventory_2_outlined,
-                        validator: _validateName,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Category field (Optional)
-                      _buildTextField(
-                        fieldKey: const Key('product_category_field'),
-                        controller: _categoryController,
-                        label: 'Category',
-                        hint: 'e.g., Electronics, Accessories, Office',
-                        icon: Icons.category_outlined,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Price field
-                      _buildTextField(
-                        fieldKey: const Key('product_price_field'),
-                        controller: _priceController,
-                        label: 'Price (\$)',
-                        hint: 'e.g., 29.99',
-                        icon: Icons.attach_money_rounded,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        validator: _validatePrice,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Quantity field
-                      _buildTextField(
-                        fieldKey: const Key('product_quantity_field'),
-                        controller: _quantityController,
-                        label: 'Quantity in Stock',
-                        hint: 'e.g., 25',
-                        icon: Icons.numbers_rounded,
-                        keyboardType: TextInputType.number,
-                        validator: _validateQuantity,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Compact, attractive low-stock rule informational panel
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 13,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3EFFF),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: const Color(0xFFE5DCFD),
-                      width: 1,
                     ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 10),
+
+                    // Secondary Cancel button
+                    OutlinedButton(
+                      key: const Key('cancel_product_button'),
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF5B2EBC),
+                        side: const BorderSide(
+                          color: Color(0xFFD4C8FA),
+                          width: 1.2,
                         ),
-                        child: const Icon(
-                          Icons.shield_outlined,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
                           color: Color(0xFF5B2EBC),
-                          size: 18,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Automatic Stock Tracking Rule',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF5B2EBC),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Quantities ≤ ${widget.lowStockThreshold} display an amber Low Stock badge. Products with 0 units display a red Out of Stock badge.',
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                color: Color(0xFF5B5875),
-                                height: 1.35,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                 ),
-                const SizedBox(height: 22),
-
-                // Primary Save / Update button
-                ElevatedButton(
-                  key: const Key('save_product_button'),
-                  onPressed: _handleSave,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF5B2EBC),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    elevation: 2,
-                    shadowColor: const Color(0xFF5B2EBC)
-                        .withValues(alpha: 0.35),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _isEditing ? 'Update Product' : 'Save Product',
-                        style: const TextStyle(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 0.1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Secondary Cancel button
-                OutlinedButton(
-                  key: const Key('cancel_product_button'),
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF5B2EBC),
-                    side: const BorderSide(
-                      color: Color(0xFFD4C8FA),
-                      width: 1.2,
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                  ),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF5B2EBC),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
+              ),
             ),
           ),
         ),
@@ -411,34 +423,34 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   /// Informational hero banner distinguishing Add vs Edit workflows.
   Widget _buildHeroBanner() {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEAEAEE), width: 1.2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFEAEAEE), width: 1.1),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF161324).withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: const Color(0xFFF3EFFF),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               _isEditing ? Icons.edit_note_rounded : Icons.add_business_rounded,
               color: const Color(0xFF5B2EBC),
-              size: 24,
+              size: 20,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

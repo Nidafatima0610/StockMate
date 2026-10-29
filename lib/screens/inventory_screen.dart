@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../models/stock_movement.dart';
 import '../services/inventory_storage.dart';
+import '../theme/app_theme.dart';
 import 'add_edit_product_screen.dart';
 import 'stock_history_screen.dart';
 
@@ -29,6 +30,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   int _lowStockThreshold = kDefaultLowStockThreshold;
 
   // Search, filter, category, and sort state
+  final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   StockFilter _selectedFilter = StockFilter.all;
@@ -48,6 +50,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -585,6 +588,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
 
     if (updatedProduct != null && mounted) {
+      if (_scrollController.hasClients && _scrollController.offset > 0) {
+        _scrollController.jumpTo(0.0);
+      }
       final oldProduct = product;
       setState(() {
         final index = _products.indexWhere((p) => p.id == updatedProduct.id);
@@ -779,123 +785,153 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7FC),
+      appBar: _buildAppBar(),
       body: SafeArea(
         top: false,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            // 1. Refined Brand Header, Overview Control Panel & Total Valuation
-            _buildDashboardHeader(
-              totalCount: totalCount,
-              lowStockCount: lowStockCount,
-              outOfStockCount: outOfStockCount,
-              totalValuation: totalValuation,
-            ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 820),
+            child: ListView(
+              controller: _scrollController,
+              padding: const EdgeInsets.only(top: 8, bottom: 84),
+              children: [
+                // 1. Executive Total Valuation Banner
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _buildValuationCard(
+                    totalValuation: totalValuation,
+                    totalCount: totalCount,
+                  ),
+                ),
+                const SizedBox(height: 8),
 
-            // 2. Search, Sort Selector, Stock Filters & Category Filters
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Column(
-                children: [
-                  Row(
+                // 2. Redesigned 3-Card Summary Metrics Grid
+                _buildMetricsOverview(
+                  totalCount: totalCount,
+                  lowStockCount: lowStockCount,
+                  outOfStockCount: outOfStockCount,
+                ),
+                const SizedBox(height: 10),
+
+                // 3. Search & Sort Selector
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
                     children: [
                       Expanded(child: _buildSearchBar()),
                       const SizedBox(width: 8),
                       _buildSortSelector(),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  _buildFilterChips(),
-                  const SizedBox(height: 8),
-                  _buildCategoryFilterRow(),
-                ],
-              ),
-            ),
+                ),
+                const SizedBox(height: 8),
 
-            // 3. Products Section Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.inventory_2_outlined,
-                          size: 16,
-                          color: Color(0xFF5B2EBC),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Products (${filteredList.length})',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1B1829),
-                              letterSpacing: -0.2,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    key: const Key('threshold_settings_button'),
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: _showThresholdDialog,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3EFFF),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: const Color(0xFFE5DCFD),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.tune_rounded,
-                            size: 11,
-                            color: Color(0xFF5B2EBC),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Threshold: ≤ $_lowStockThreshold',
-                            style: const TextStyle(
-                              fontSize: 11,
+                // 4. Stock Status Filter Chips
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _buildFilterChips(),
+                ),
+                const SizedBox(height: 8),
+
+                // 5. Category Filter Chips
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _buildCategoryFilterRow(),
+                ),
+                const SizedBox(height: 10),
+
+                // 6. Products Section Header with Threshold Action Pill
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.format_list_bulleted_rounded,
+                              size: 16,
                               color: Color(0xFF5B2EBC),
-                              fontWeight: FontWeight.bold,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                'Products (${filteredList.length})',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1B1829),
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      InkWell(
+                        key: const Key('threshold_settings_button'),
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: _showThresholdDialog,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3EFFF),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFFE5DCFD),
+                              width: 1,
                             ),
                           ),
-                        ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.tune_rounded,
+                                size: 11,
+                                color: Color(0xFF5B2EBC),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Threshold: ≤ $_lowStockThreshold',
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  color: Color(0xFF5B2EBC),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+
+                // 7. Individual Product Cards or Polished Empty State
+                if (filteredList.isEmpty)
+                  _buildEmptyState()
+                else
+                  Column(
+                    children: [
+                      for (final product in filteredList)
+                        _buildProductCard(product),
+                    ],
+                  ),
+
+                // Clearance for Floating Action Button
+                const SizedBox(height: 84),
+              ],
             ),
-
-            const SizedBox(height: 6),
-
-            // 4. Products List or Polished Empty State
-            if (filteredList.isEmpty)
-              _buildEmptyState()
-            else
-              _buildProductListContainer(filteredList),
-
-            // Clearance for Floating Action Button
-            const SizedBox(height: 84),
-          ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -918,286 +954,267 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  /// Refined brand header with compact store status, calculated metrics, and valuation.
-  Widget _buildDashboardHeader({
-    required int totalCount,
-    required int lowStockCount,
-    required int outOfStockCount,
+  /// Distinctive top App Bar with branding lockup, live indicator, and Stock History.
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      backgroundColor: const Color(0xFF431C9A),
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF2A0F55), Color(0xFF431C9A), Color(0xFF5B2EBC)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      ),
+      titleSpacing: 16,
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(7),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            child: const Icon(
+              Icons.inventory_2_rounded,
+              color: Colors.white,
+              size: 15,
+            ),
+          ),
+          const SizedBox(width: 6),
+          const Flexible(
+            child: Text(
+              'StockMate',
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 17,
+                color: Colors.white,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 14),
+          child: InkWell(
+            key: const Key('history_button'),
+            onTap: _navigateToHistory,
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.24),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.history_rounded,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'History',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (_movements.isNotEmpty) ...[
+                    const SizedBox(width: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.28),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${_movements.length}',
+                        style: const TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Executive total inventory valuation banner.
+  Widget _buildValuationCard({
     required double totalValuation,
+    required int totalCount,
   }) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF451D87), Color(0xFF5B2EBC)],
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF381473), Color(0xFF5B2EBC)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top row: Brand lockup and Store Status
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.22),
-                              width: 1,
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.inventory_2_rounded,
-                            color: Colors.white,
-                            size: 19,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'StockMate',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 19,
-                                  color: Colors.white,
-                                  letterSpacing: -0.2,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                'Small Business Inventory',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFFE2D9FC),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Stock History screen button
-                      InkWell(
-                        key: const Key('history_button'),
-                        onTap: _navigateToHistory,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.25),
-                              width: 1,
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.history_rounded,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                'History',
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Store Status indicator
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.circle,
-                              color: Color(0xFF4ADE80),
-                              size: 7.5,
-                            ),
-                            SizedBox(width: 5),
-                            Text(
-                              'Store Active',
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 14),
-
-              // Compact horizontal summary metrics card
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: IntrinsicHeight(
-                  child: Row(
-                    children: [
-                      _buildMetricTile(
-                        count: '$totalCount',
-                        label: 'Total Products',
-                        icon: Icons.inventory_2_outlined,
-                        color: const Color(0xFF5B2EBC),
-                        filter: StockFilter.all,
-                      ),
-                      const VerticalDivider(
-                        width: 1,
-                        thickness: 1,
-                        color: Color(0xFFEAEAEE),
-                      ),
-                      _buildMetricTile(
-                        count: '$lowStockCount',
-                        label: 'Low Stock',
-                        icon: Icons.warning_amber_rounded,
-                        color: const Color(0xFFB45309),
-                        filter: StockFilter.lowStock,
-                      ),
-                      const VerticalDivider(
-                        width: 1,
-                        thickness: 1,
-                        color: Color(0xFFEAEAEE),
-                      ),
-                      _buildMetricTile(
-                        count: '$outOfStockCount',
-                        label: 'Out of Stock',
-                        icon: Icons.remove_circle_outline_rounded,
-                        color: const Color(0xFFC02626),
-                        filter: StockFilter.outOfStock,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Total Inventory Valuation ribbon
-              Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.22),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Expanded(
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.account_balance_wallet_outlined,
-                            size: 15,
-                            color: Color(0xFFE2D9FC),
-                          ),
-                          SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              'Total Inventory Value',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFFE2D9FC),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '\$${totalValuation.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: 0.1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF431C9A).withValues(alpha: 0.24),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
-        ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.account_balance_wallet_outlined,
+                      size: 13,
+                      color: Color(0xFFE2D9FC),
+                    ),
+                    SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        'Total Inventory Value',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFE2D9FC),
+                          letterSpacing: 0.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '\$${totalValuation.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -0.3,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.22),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.insights_rounded,
+                  color: Colors.white,
+                  size: 12,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '$totalCount Items',
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// Single metric tile inside the horizontal summary card.
-  Widget _buildMetricTile({
+  /// Row of 3 dedicated, interactive KPI overview cards.
+  Widget _buildMetricsOverview({
+    required int totalCount,
+    required int lowStockCount,
+    required int outOfStockCount,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _buildKpiCard(
+            count: '$totalCount',
+            label: 'Total Products',
+            icon: Icons.inventory_2_outlined,
+            color: const Color(0xFF5B2EBC),
+            filter: StockFilter.all,
+          ),
+          const SizedBox(width: 6),
+          _buildKpiCard(
+            count: '$lowStockCount',
+            label: 'Low Stock',
+            icon: Icons.warning_amber_rounded,
+            color: const Color(0xFFB45309),
+            filter: StockFilter.lowStock,
+          ),
+          const SizedBox(width: 6),
+          _buildKpiCard(
+            count: '$outOfStockCount',
+            label: 'Out of Stock',
+            icon: Icons.remove_circle_outline_rounded,
+            color: const Color(0xFFC02626),
+            filter: StockFilter.outOfStock,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Single interactive KPI metric card.
+  Widget _buildKpiCard({
     required String count,
     required String label,
     required IconData icon,
@@ -1208,32 +1225,45 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     return Expanded(
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         onTap: () {
           setState(() {
             _selectedFilter = filter;
           });
         },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
           decoration: BoxDecoration(
-            color: isSelected
-                ? color.withValues(alpha: 0.08)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? color : const Color(0xFFEAEAEE),
+              width: isSelected ? 1.6 : 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isSelected
+                    ? color.withValues(alpha: 0.12)
+                    : const Color(0xFF161324).withValues(alpha: 0.03),
+                blurRadius: isSelected ? 8 : 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 14, color: color),
+                  Icon(icon, size: 13, color: color),
                   const SizedBox(width: 4),
                   Text(
                     count,
                     style: TextStyle(
-                      fontSize: 19,
+                      fontSize: 15.5,
                       fontWeight: FontWeight.w800,
                       color: color,
                       height: 1.1,
@@ -1245,9 +1275,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.bold,
-                  color: color.withValues(alpha: 0.85),
+                  fontSize: 9.5,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected ? color : const Color(0xFF5C5872),
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
@@ -1448,169 +1478,158 @@ class _InventoryScreenState extends State<InventoryScreen> {
   /// Horizontally scrollable category filter chips.
   Widget _buildCategoryFilterRow() {
     final categories = _availableCategories;
-    return SizedBox(
-      height: 29,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          final cat = categories[index];
-          final isSelected = _selectedCategory == cat;
-          return InkWell(
-            key: Key('category_chip_$cat'),
-            borderRadius: BorderRadius.circular(8),
-            onTap: () {
-              setState(() {
-                _selectedCategory = cat;
-              });
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF5B2EBC) : Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF5B2EBC)
-                      : const Color(0xFFE2E2EA),
-                  width: 1,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  cat,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                    color: isSelected ? Colors.white : const Color(0xFF555268),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  /// Unified, clean container grouping product rows with subtle dividers.
-  Widget _buildProductListContainer(List<Product> products) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8E8EE), width: 1.1),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1B1829).withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
         children: [
-          for (int i = 0; i < products.length; i++) ...[
-            if (i > 0)
-              const Divider(
-                height: 1,
-                thickness: 1,
-                color: Color(0xFFF1F1F6),
-                indent: 64,
-              ),
-            _buildProductRow(products[i]),
+          for (int i = 0; i < categories.length; i++) ...[
+            if (i > 0) const SizedBox(width: 6),
+            _buildCategoryChip(categories[i]),
           ],
         ],
       ),
     );
   }
 
-  /// Single compact product row with category icon, stock badge, price, delete, and +/- quantity controls.
-  Widget _buildProductRow(Product product) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        key: Key('edit_product_${product.id}'),
-        onTap: () => _navigateToEditProduct(product),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Category icon tile
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3EFFF),
-                  borderRadius: BorderRadius.circular(11),
-                  border: Border.all(color: const Color(0xFFE5DCFD), width: 1),
-                ),
-                child: Icon(
-                  _getCategoryIcon(product.category),
-                  color: const Color(0xFF5B2EBC),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
+  Widget _buildCategoryChip(String cat) {
+    final isSelected = _selectedCategory == cat;
+    return InkWell(
+      key: Key('category_chip_$cat'),
+      borderRadius: BorderRadius.circular(8),
+      onTap: () {
+        setState(() {
+          _selectedCategory = cat;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF5B2EBC) : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF5B2EBC)
+                : const Color(0xFFE2E2EA),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          cat,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            color: isSelected ? Colors.white : const Color(0xFF555268),
+          ),
+        ),
+      ),
+    );
+  }
 
-              // Title, Category/SKU, and Stock Badge
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.name,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1B1829),
-                        letterSpacing: -0.1,
+  /// Individual elevated product card with clear product name, category, SKU, price,
+  /// delete action, stock status badge, and +/- quantity controls.
+  Widget _buildProductCard(Product product) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEAEAEE), width: 1.1),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          children: [
+            // Top clickable portion: Category avatar, Name, Category chip, SKU, Price, Delete
+            InkWell(
+              key: Key('edit_product_${product.id}'),
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => _navigateToEditProduct(product),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Category icon avatar tile
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3EFFF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFFE5DCFD),
+                        width: 1,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 3),
-                    Row(
+                    child: Icon(
+                      _getCategoryIcon(product.category),
+                      color: const Color(0xFF5B2EBC),
+                      size: 19,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  // Product Title, Category capsule, SKU
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(
-                          child: Text(
-                            product.category,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF6B687E),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
                         Text(
-                          '#${product.id}',
+                          product.name,
                           style: const TextStyle(
-                            fontSize: 10.5,
-                            color: Color(0xFF9E9CAF),
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF161324),
+                            letterSpacing: -0.1,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 1.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF4F3F8),
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                child: Text(
+                                  product.category,
+                                  style: const TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF6B687E),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                '#${product.id}',
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  color: Color(0xFF9E9CAF),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 5),
+                  ),
+                  const SizedBox(width: 8),
 
-                    // Stock status badge
-                    _buildStockBadge(product),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // Price, Delete button, and Quantity stepper
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
+                  // Price and Delete Button
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1623,7 +1642,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           letterSpacing: -0.2,
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 4),
                       Tooltip(
                         message: 'Delete product',
                         child: InkWell(
@@ -1642,14 +1661,24 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 5),
-
-                  // Functional Quantity Stepper (+/-)
-                  _buildQuantityStepper(product),
                 ],
               ),
-            ],
-          ),
+            ),
+
+            const SizedBox(height: 8),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFF2F2F6)),
+            const SizedBox(height: 8),
+
+            // Bottom row: Stock status badge on left, Quantity stepper on right
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(child: _buildStockBadge(product)),
+                const SizedBox(width: 6),
+                _buildQuantityStepper(product),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -1840,6 +1869,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
+              key: const Key('empty_add_product_button'),
               onPressed: _navigateToAddProduct,
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('Add First Product'),

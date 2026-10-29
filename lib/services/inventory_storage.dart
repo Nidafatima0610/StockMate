@@ -45,9 +45,17 @@ class InventoryStorage {
 
       final dynamic decoded = jsonDecode(jsonString);
       if (decoded is List) {
-        return decoded
-            .map((item) => Product.fromJson(item as Map<String, dynamic>))
-            .toList();
+        final products = <Product>[];
+        for (final item in decoded) {
+          if (item is Map) {
+            try {
+              products.add(Product.fromJson(Map<String, dynamic>.from(item)));
+            } catch (_) {
+              // Gracefully skip any corrupted individual records
+            }
+          }
+        }
+        return products;
       }
     } catch (_) {
       // In case of corrupt or uninitialized test storage, fall back safely to sample products
@@ -80,9 +88,14 @@ class InventoryStorage {
 
       final dynamic decoded = jsonDecode(jsonString);
       if (decoded is List) {
-        final list = decoded
-            .map((item) => StockMovement.fromJson(item as Map<String, dynamic>))
-            .toList();
+        final list = <StockMovement>[];
+        for (final item in decoded) {
+          if (item is Map) {
+            try {
+              list.add(StockMovement.fromJson(Map<String, dynamic>.from(item)));
+            } catch (_) {}
+          }
+        }
         // Ensure sorted newest first
         list.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         return list;
