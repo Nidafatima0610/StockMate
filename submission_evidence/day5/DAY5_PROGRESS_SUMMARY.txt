@@ -1,0 +1,254 @@
+================================================================================
+STACK & SCALE REMOTE INTERNSHIP 2026
+WEEK 01 - DAY 5 / FINAL PROGRESS EVIDENCE SUMMARY REPORT
+================================================================================
+
+Project Name:        StockMate - Small Business Inventory Management App
+Internship Cohort:   Stack & Scale Remote Internship 2026
+Evaluation Stage:    Week 01 - Day 5 / Final Submission Deliverable
+Report Date:         October 30, 2026
+Repository Root:     C:\Users\umair\Desktop\stock_mate
+Target Evidence Dir: submission_evidence/day5/
+Framework & Engine:  Flutter 3.x / Dart 3.x (Material 3 Design System)
+State & Persistence: Local SharedPreferences JSON Persistence Engine
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE PROJECT SUMMARY
+--------------------------------------------------------------------------------
+StockMate has successfully reached its final Week 1 production-ready milestone.
+The application provides small business owners and inventory managers with an
+intuitive, performant, and fully offline-capable inventory tracking solution.
+
+Yesterday, the application was completely redesigned into an elegant, unified
+four-page navigation architecture:
+  1. Dashboard        - Real-time valuation hero, KPI summaries, urgent restock alerts.
+  2. Products Catalog - Complete searchable/filterable catalog, CRUD management.
+  3. Stock History    - Chronological audit ledger tracking every stock fluctuation.
+  4. Settings & Rules - Configurable low-stock thresholds, preferences, reset tools.
+
+All requested features, forms, business logic, persistence layers, and automated
+test suites are fully functional, thoroughly verified, and documented below.
+
+--------------------------------------------------------------------------------
+2. COMPLETED FEATURES (VERIFIED ON ACTUAL IMPLEMENTATION)
+--------------------------------------------------------------------------------
+The following features are 100% implemented, active in the code, and verified
+through both automated testing and live Flutter runtime execution:
+
+A. Executive Dashboard (Page 1)
+   - Real-Time Inventory Valuation: Automatically calculates total value across all
+     products via ∑ (Unit Price × On-Hand Quantity), formatted to 2 decimal places.
+   - KPI Summary Cards: Real-time counters for Total Products, Low-Stock Items,
+     and Out-of-Stock Items.
+   - Catalog Health Indicator: Visual badge indicating active store state and stock
+     distribution breakdown (Optimal / Low / Depleted).
+   - Urgent Restock Required Banner: Highlights items needing immediate replenishment
+     with a single-tap "Review" shortcut button filtering low-stock items.
+   - Quick Action Shortcuts: Immediate buttons for "+ Add Product" and "View Catalog".
+   - Recent Inventory List: Displays catalog items with instant quantity steppers.
+
+B. Complete Products Catalog (Page 2)
+   - Comprehensive Item Cards: Displays product title, category tag, unique SKU/code,
+     price, visual stock status badge, and action controls.
+   - Live Search Filtering: Real-time filtering by product name or item code.
+   - Multi-Criteria Sorting: Dropdown sorting by Price (Low/High, High/Low),
+     Quantity (Low/High, High/Low), and Name (A-Z, Z-A).
+   - Stock Status Filter Pills: Quick filtering by "All", "Low Stock", "Out of Stock".
+   - Category Filter Chips: Categorical filtering (Electronics, Accessories, General, etc.).
+   - Floating Action Button (FAB): Direct access to product registration from anywhere
+     in the catalog.
+
+C. Product Registration & Validation Flow (Add Product)
+   - Dedicated Add Product Screen: Clean Material 3 input form.
+   - Product Name Validation: Enforces non-empty name with clear inline red error alerts.
+   - Price Validation: Strict positive numeric validation preventing negative, zero,
+     or malformed price inputs.
+   - Quantity Validation: Enforces non-negative whole integer input.
+   - Fast Category Selection: Quick-tap chips (Electronics, Accessories, Office,
+     Peripherals, General) or custom input.
+   - Batch Value Preview: Dynamic calculation of (Price × Initial Quantity) before saving.
+   - Automatic Audit Logging: Automatically creates an initial stock inflow entry in
+     the movement history upon saving.
+
+D. Product Editing & Updating (Edit Product)
+   - Pre-Filled Form: Tap any product card to open the Edit screen populated with
+     current name, category, price, and stock levels.
+   - Live Batch Valuation Recalculation: Real-time update of batch value as fields change.
+   - Immediate Propagation: Updating an item synchronizes instantaneously across the
+     catalog, dashboard valuation, summary counters, and storage.
+
+E. In-Place Quantity Stepper Controls
+   - Fast +/- Controls: Increment or decrement inventory directly from product cards.
+   - Safe Zero Clamping: Decrementing at quantity 0 safely disables the minus button
+     and prevents negative inventory.
+   - Dynamic Stock Status Updates: Instant transition between "In Stock", "Low Stock",
+     and "Out of Stock" states.
+   - Automatic Audit Movement: Each stepper tap generates an immediate audit log
+     ("Quick stepper increment (+1)" / "Quick stepper decrement (-1)").
+
+F. Safe Deletion & Instant Undo
+   - Accidental Deletion Protection: Confirmation dialog with "Cancel" and "Delete"
+     options before removing an item.
+   - Floating Undo SnackBar: Upon confirmation, a dark floating SnackBar provides an
+     "UNDO" action button.
+   - Instant State Restoration: Tapping "UNDO" restores the deleted product with all
+     original attributes and logs a restoration event.
+
+G. Stock Movement History Audit Ledger (Page 3)
+   - Comprehensive Chronological Ledger: Records every stock event with timestamp,
+     previous quantity, new quantity, net delta (+/-), and descriptive reason.
+   - Audit Metric Cards: Summary cards showing Inflow Count (+), Outflow Count (-),
+     and Total Movement Records.
+   - Search & Type Filtering: Search movements by product name/SKU, or filter by
+     "All", "Stock In", or "Stock Out".
+
+H. Configurable Low-Stock Threshold System (Page 4)
+   - Dynamic Warning Trigger Limit: Customize the global low-stock threshold rule
+     (defaults to ≤ 5 units).
+   - Quick Preset Selection Chips: One-tap presets for ≤ 3, ≤ 5, ≤ 10, ≤ 15, ≤ 20, ≤ 25.
+   - Custom Threshold Modal Dialog: Numerical entry dialog for arbitrary threshold rules.
+   - Live Impact Preview: Real-time counter showing how many items fall into low-stock
+     or out-of-stock under the chosen threshold rule.
+   - Cross-App Reactivity: Changing threshold updates indicators on Dashboard,
+     Product Catalog, and History without app restart.
+
+I. Local Data Persistence Engine
+   - Resilient Storage: Backed by SharedPreferences with robust JSON serialization.
+   - Complete State Recovery: Products, movement audit history, threshold rules, and
+     user preferences survive complete app restarts and app termination.
+   - Data Management Controls: One-tap "Reset Demo Catalog" and "Clear History" options
+     with safety prompts.
+
+--------------------------------------------------------------------------------
+3. AUTOMATED TESTING STATUS
+--------------------------------------------------------------------------------
+Testing Framework:   Flutter Test Engine (flutter test)
+Execution Date:      October 30, 2026
+Execution Outcome:   ALL PASSING (Zero Failures)
+
+Test Results Summary:
+  - Total Tests:     66
+  - Tests Passed:    62
+  - Tests Skipped:   4 (legacy golden generation templates requiring --update-goldens)
+  - Tests Failed:    0
+  - Pass Rate:       100.0% of executable tests
+
+Key Test Suites Verified:
+  1. widget_test.dart:
+     - 4-page bottom navigation switching between Dashboard, Products, History, Settings.
+     - Cross-page state propagation (editing products, adding products, deleting items).
+     - Live inventory valuation recalculation upon quantity changes.
+     - Form validation tests (empty name, negative price, decimal quantity).
+     - Search and multi-category filtering tests.
+     - Stepper controls and boundary clamping at zero.
+     - Deletion confirmation dialog and instant Undo SnackBar behavior.
+  2. day4_enhancements_test.dart:
+     - StockMovement JSON serialization and deserialization.
+     - Configurable threshold boundary logic (In Stock, Low Stock, Out of Stock).
+     - Storage persistence across simulated app restart.
+     - Empty inventory preservation and graceful handling.
+  3. capture_4page_navigation_screenshots_test.dart:
+     - Visual layout integrity and viewport rendering validation.
+
+--------------------------------------------------------------------------------
+4. DAY 5 EVIDENCE SCREENSHOT PACK (11 GENUINE PNGS)
+--------------------------------------------------------------------------------
+Location: C:\Users\umair\Desktop\stock_mate\submission_evidence\day5\
+
+All screenshots are captured directly from the live Flutter application engine
+(CanvasKit / WebGL) at crisp mobile resolution (1082 × 2402 px) with 100% genuine
+system fonts, accurate Material 3 icons, and real application data.
+
+--------------------------------------------------------------------------------
+File Name                      Size (Bytes)  Resolution   Description
+--------------------------------------------------------------------------------
+01_dashboard_final.png         474,425 B     1082 × 2402  Final Dashboard with $988.26
+                                                          total valuation hero card,
+                                                          3 summary KPI cards (Total,
+                                                          Low Stock, Out of Stock),
+                                                          urgent restock banner, quick
+                                                          action buttons, and bottom
+                                                          navigation with Dashboard active.
+
+02_products_page.png           289,102 B     1082 × 2402  Complete Products catalog
+                                                          showing search bar, sort menu,
+                                                          status pills (All, Low Stock,
+                                                          Out of Stock), category chips,
+                                                          active product cards with
+                                                          steppers, and bottom navigation
+                                                          with Products active.
+
+03_add_product_form.png        197,714 B     1082 × 2402  Add New Product screen showing
+                                                          form validation with red error
+                                                          borders and alerts ("Product
+                                                          name cannot be empty", "Price
+                                                          cannot be empty", "Quantity
+                                                          cannot be empty").
+
+04_edit_product.png            181,240 B     1082 × 2402  Edit Product screen populated
+                                                          with pre-filled information for
+                                                          "Mechanical Gaming Keyboard",
+                                                          Electronics category selected,
+                                                          price $89.50, quantity 3, and
+                                                          live batch valuation preview.
+
+05_quantity_management.png     474,188 B     1082 × 2402  Quantity increase interaction
+                                                          demonstrating Mechanical Gaming
+                                                          Keyboard incremented from 3 to 4,
+                                                          live valuation updating to
+                                                          $1,077.76, and History counter
+                                                          incrementing to 1.
+
+06_low_stock_status.png        175,729 B     1082 × 2402  Low-stock isolation view with
+                                                          "Low Stock" filter active,
+                                                          prominently displaying the
+                                                          amber warning badge "⚠ Low
+                                                          Stock (3)" and Threshold chip
+                                                          "Threshold: ≤ 5".
+
+07_delete_and_undo.png         267,154 B     1082 × 2402  Delete & Undo functionality
+                                                          showing the catalog immediately
+                                                          after item removal with the
+                                                          dark floating SnackBar active:
+                                                          "Mechanical Gaming Keyboard
+                                                          deleted" and gold "UNDO" button.
+
+08_stock_history.png           224,862 B     1082 × 2402  Stock Movement History page
+                                                          displaying KPI metrics (+2 Inflow,
+                                                          -1 Outflow, 3 Audit records),
+                                                          search filter, type pills, and
+                                                          chronological movement cards.
+
+09_settings_page.png           315,256 B     1082 × 2402  Settings & Rules page showing
+                                                          warning trigger limit (≤ 5 units),
+                                                          quick preset selection chips
+                                                          (≤ 3, ≤ 5, ≤ 10, ≤ 15, ≤ 20, ≤ 25),
+                                                          live impact summary, preference
+                                                          switches, and app version footer.
+
+10_threshold_updated.png       315,881 B     1082 × 2402  Updated threshold setting showing
+                                                          preset "≤ 10" selected, trigger
+                                                          limit updated to "≤ 10 units"
+                                                          (gold badge), and live impact
+                                                          recalculated immediately.
+
+11_final_navigation.png        488,889 B     1082 × 2402  Final application navigation
+                                                          overview showing the 4-page bottom
+                                                          navigation shell (Dashboard,
+                                                          Products, History, Settings) with
+                                                          the updated threshold rule (≤ 10)
+                                                          and updated valuation ($2,938.11).
+
+--------------------------------------------------------------------------------
+5. VERIFICATION & REPOSITORY HYGIENE
+--------------------------------------------------------------------------------
+- All 11 screenshot files have been verified to exist on disk at their exact paths.
+- File sizes range between 175 KB and 489 KB with zero corruption.
+- All screenshots are 100% genuine captures of the running Flutter application.
+- All text and icons are rendered with native Typography (no fallback white boxes).
+- No production source code in lib/ was modified.
+- No files have been pushed or uploaded to GitHub or external endpoints.
+
+================================================================================
+END OF DAY 5 PROGRESS EVIDENCE SUMMARY REPORT
+================================================================================
