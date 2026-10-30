@@ -15,7 +15,9 @@ void main() {
 /// - Crisp white cards with structured typography and accessible status badges
 /// - Configurable low-stock threshold, stock movements audit ledger, and offline persistence
 class StockMateApp extends StatelessWidget {
-  const StockMateApp({super.key});
+  final int initialIndex;
+
+  const StockMateApp({super.key, this.initialIndex = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +25,7 @@ class StockMateApp extends StatelessWidget {
       title: 'StockMate',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const InventoryScreen(),
+      home: InventoryScreen(initialIndex: initialIndex),
     );
   }
 }

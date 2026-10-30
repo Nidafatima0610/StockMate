@@ -5,23 +5,33 @@ import '../models/stock_movement.dart';
 import '../services/inventory_storage.dart';
 import '../theme/app_theme.dart';
 import 'add_edit_product_screen.dart';
+import 'settings_screen.dart';
 import 'stock_history_screen.dart';
 
-/// Professional small-business inventory dashboard for StockMate.
+/// Professional small-business inventory management application for StockMate.
 ///
-/// Features calculated stock health metrics, valuation summary, persistent storage,
-/// quick +/- quantity adjustments, sort and category filtering, product deletion with undo,
-/// stock movement history auditing, and user-configurable low-stock threshold.
+/// Features a unified 4-page navigation shell:
+/// 1. Dashboard: overview metrics, valuation hero, stock alerts, quick actions, recent products
+/// 2. Products: complete catalog with search, category filtering, stock filters, sorting, and full cards
+/// 3. Stock History: complete audit ledger with KPI metrics, search, and type filters
+/// 4. Settings: configurable low-stock threshold, inventory rules, and catalog data management
 class InventoryScreen extends StatefulWidget {
   final InventoryStorage storage;
+  final int initialIndex;
 
-  const InventoryScreen({super.key, this.storage = const InventoryStorage()});
+  const InventoryScreen({
+    super.key,
+    this.storage = const InventoryStorage(),
+    this.initialIndex = 0,
+  });
 
   @override
   State<InventoryScreen> createState() => _InventoryScreenState();
 }
 
 class _InventoryScreenState extends State<InventoryScreen> {
+  late int _selectedIndex;
+
   // In-memory product catalog initialized with sample products
   late List<Product> _products = List.from(sampleProducts);
 
@@ -40,6 +50,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialIndex;
     _loadFromStorage();
     _searchController.addListener(() {
       setState(() {
@@ -106,6 +117,30 @@ class _InventoryScreenState extends State<InventoryScreen> {
       _movements.insert(0, movement);
     });
     widget.storage.saveMovements(_movements);
+  }
+
+  /// Updates and persists the low-stock threshold rule across all screens.
+  void _setLowStockThreshold(int newThreshold) {
+    setState(() {
+      _lowStockThreshold = newThreshold;
+    });
+    widget.storage.saveLowStockThreshold(newThreshold);
+  }
+
+  /// Restores default sample products and saves to persistent storage.
+  Future<void> _resetDemoCatalog() async {
+    setState(() {
+      _products = List<Product>.from(sampleProducts);
+    });
+    await widget.storage.saveProducts(_products);
+  }
+
+  /// Clears historical stock movement logs and saves to storage.
+  Future<void> _clearMovements() async {
+    setState(() {
+      _movements = [];
+    });
+    await widget.storage.saveMovements([]);
   }
 
   /// Navigates to the Stock Movement History screen.
@@ -750,21 +785,149 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   /// Maps product categories to contextual icons.
   IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
+    switch (category.toLowerCase().trim()) {
       case 'electronics':
         return Icons.devices_rounded;
       case 'accessories':
         return Icons.cable_rounded;
       case 'office':
         return Icons.business_center_rounded;
+      case 'peripherals':
+        return Icons.mouse_rounded;
+      case 'audio':
+        return Icons.headphones_rounded;
       default:
         return Icons.inventory_2_rounded;
     }
   }
 
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase().trim()) {
+      case 'electronics':
+        return const Color(0xFF2563EB);
+      case 'accessories':
+        return const Color(0xFF5B2EBC);
+      case 'office':
+        return const Color(0xFF059669);
+      case 'peripherals':
+        return const Color(0xFFD946EF);
+      case 'audio':
+        return const Color(0xFFEA580C);
+      default:
+        return const Color(0xFF5B2EBC);
+    }
+  }
+
+  Color _getCategoryBg(String category) {
+    switch (category.toLowerCase().trim()) {
+      case 'electronics':
+        return const Color(0xFFEFF6FF);
+      case 'accessories':
+        return const Color(0xFFF3EFFF);
+      case 'office':
+        return const Color(0xFFECFDF5);
+      case 'peripherals':
+        return const Color(0xFFFDF2F8);
+      case 'audio':
+        return const Color(0xFFFFF7ED);
+      default:
+        return const Color(0xFFF5F3FF);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Dynamically calculate stock metrics and inventory valuation
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F7FC),
+      body: _buildCurrentPage(),
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Color(0xFFEAEAEE), width: 1)),
+        ),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          backgroundColor: Colors.white,
+          elevation: 4,
+          indicatorColor: const Color(0xFFF3EFFF),
+          destinations: const [
+            NavigationDestination(
+              key: Key('nav_dashboard'),
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(
+                Icons.dashboard_rounded,
+                color: Color(0xFF5B2EBC),
+              ),
+              label: 'Dashboard',
+            ),
+            NavigationDestination(
+              key: Key('nav_products'),
+              icon: Icon(Icons.inventory_2_outlined),
+              selectedIcon: Icon(
+                Icons.inventory_2_rounded,
+                color: Color(0xFF5B2EBC),
+              ),
+              label: 'Products',
+            ),
+            NavigationDestination(
+              key: Key('nav_history'),
+              icon: Icon(Icons.history_rounded),
+              selectedIcon: Icon(
+                Icons.history_rounded,
+                color: Color(0xFF5B2EBC),
+              ),
+              label: 'History',
+            ),
+            NavigationDestination(
+              key: Key('nav_settings'),
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(
+                Icons.settings_rounded,
+                color: Color(0xFF5B2EBC),
+              ),
+              label: 'Settings',
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: (_selectedIndex == 0 || _selectedIndex == 1)
+          ? FloatingActionButton(
+              key: const Key('add_product_fab'),
+              onPressed: _navigateToAddProduct,
+              backgroundColor: const Color(0xFF5B2EBC),
+              foregroundColor: Colors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              tooltip: 'Add Product',
+              child: const Icon(Icons.add_rounded, size: 26),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildCurrentPage() {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildDashboardPage();
+      case 1:
+        return _buildProductsPage();
+      case 2:
+        return _buildHistoryPage();
+      case 3:
+        return _buildSettingsPage();
+      default:
+        return _buildDashboardPage();
+    }
+  }
+
+  /// Page 1: Dashboard Overview
+  Widget _buildDashboardPage() {
     final int totalCount = _products.length;
     final int lowStockCount = _products
         .where(
@@ -781,7 +944,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
       (sum, p) => sum + (p.price * p.quantity),
     );
 
-    final filteredList = _filteredProducts;
+    // Shows recent/featured items on dashboard
+    final recentProducts = _products.take(6).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7FC),
@@ -792,28 +956,118 @@ class _InventoryScreenState extends State<InventoryScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 820),
             child: ListView(
-              controller: _scrollController,
               padding: const EdgeInsets.only(top: 8, bottom: 84),
               children: [
-                // 1. Executive Total Valuation Banner
+                // 1. Dashboard Subtitle / Header
+                _buildDashboardHeader(),
+                const SizedBox(height: 4),
+
+                // 2. Executive Total Valuation Banner
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: _buildValuationCard(
                     totalValuation: totalValuation,
                     totalCount: totalCount,
+                    lowStockCount: lowStockCount,
+                    outOfStockCount: outOfStockCount,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
 
-                // 2. Redesigned 3-Card Summary Metrics Grid
+                // 3. 3-Card Summary Metrics Grid
                 _buildMetricsOverview(
                   totalCount: totalCount,
                   lowStockCount: lowStockCount,
                   outOfStockCount: outOfStockCount,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
 
-                // 3. Search & Sort Selector
+                // 4. Products Section Header with Threshold Action Pill
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.access_time_rounded,
+                              size: 16,
+                              color: Color(0xFF5B2EBC),
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                'Products ($totalCount)',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1B1829),
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      _buildThresholdPill(),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // 5. Important Stock Alerts Section
+                _buildStockAlertBanner(
+                  lowStockCount: lowStockCount,
+                  outOfStockCount: outOfStockCount,
+                ),
+                const SizedBox(height: 8),
+
+                // 6. Quick Actions Bar
+                _buildQuickActionBar(),
+                const SizedBox(height: 8),
+
+                // 7. Recent Product Cards or Empty State
+                if (recentProducts.isEmpty)
+                  _buildEmptyState()
+                else
+                  Column(
+                    children: [
+                      for (final product in recentProducts)
+                        _buildProductCard(product),
+                    ],
+                  ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Page 2: Products Complete Catalog
+  Widget _buildProductsPage() {
+    final filteredList = _filteredProducts;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F7FC),
+      appBar: _buildProductsAppBar(),
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 820),
+            child: ListView(
+              controller: _scrollController,
+              padding: const EdgeInsets.only(top: 10, bottom: 84),
+              children: [
+                // 1. Search & Sort Selector
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -826,21 +1080,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 const SizedBox(height: 8),
 
-                // 4. Stock Status Filter Chips
+                // 2. Stock Status Filter Chips
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: _buildFilterChips(),
                 ),
                 const SizedBox(height: 8),
 
-                // 5. Category Filter Chips
+                // 3. Category Filter Chips
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: _buildCategoryFilterRow(),
                 ),
                 const SizedBox(height: 10),
 
-                // 6. Products Section Header with Threshold Action Pill
+                // 4. Products Section Header with Threshold Action Pill
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -873,50 +1127,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      InkWell(
-                        key: const Key('threshold_settings_button'),
-                        borderRadius: BorderRadius.circular(8),
-                        onTap: _showThresholdDialog,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF3EFFF),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: const Color(0xFFE5DCFD),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.tune_rounded,
-                                size: 11,
-                                color: Color(0xFF5B2EBC),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Threshold: ≤ $_lowStockThreshold',
-                                style: const TextStyle(
-                                  fontSize: 10.5,
-                                  color: Color(0xFF5B2EBC),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      _buildThresholdPill(),
                     ],
                   ),
                 ),
                 const SizedBox(height: 8),
 
-                // 7. Individual Product Cards or Polished Empty State
+                // 5. Individual Product Cards or Polished Empty State
                 if (filteredList.isEmpty)
                   _buildEmptyState()
                 else
@@ -926,30 +1143,290 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         _buildProductCard(product),
                     ],
                   ),
-
-                // Clearance for Floating Action Button
-                const SizedBox(height: 84),
+                const SizedBox(height: 20),
               ],
             ),
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _navigateToAddProduct,
-        backgroundColor: const Color(0xFF5B2EBC),
-        foregroundColor: Colors.white,
-        elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        icon: const Icon(Icons.add_rounded, size: 22),
-        label: const Text(
-          'Add Product',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            letterSpacing: 0.1,
+    );
+  }
+
+  /// Page 3: Stock Movement Audit History
+  Widget _buildHistoryPage() {
+    return StockHistoryScreen(
+      movements: _movements,
+      activeProductIds: _products.map((p) => p.id).toSet(),
+      onBackToDashboard: () {
+        setState(() {
+          _selectedIndex = 0;
+        });
+      },
+    );
+  }
+
+  /// Page 4: Settings & Threshold Rules
+  Widget _buildSettingsPage() {
+    return SettingsScreen(
+      lowStockThreshold: _lowStockThreshold,
+      onThresholdChanged: _setLowStockThreshold,
+      onOpenThresholdDialog: _showThresholdDialog,
+      products: _products,
+      onResetDemoCatalog: _resetDemoCatalog,
+      onClearHistory: _clearMovements,
+    );
+  }
+
+  /// Interactive stock alert banner displayed on Dashboard.
+  Widget _buildStockAlertBanner({
+    required int lowStockCount,
+    required int outOfStockCount,
+  }) {
+    final hasAlerts = lowStockCount > 0 || outOfStockCount > 0;
+
+    if (!hasAlerts) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE6F7F0),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFB8ECCF), width: 1),
+        ),
+        child: const Row(
+          children: [
+            Icon(
+              Icons.check_circle_rounded,
+              color: Color(0xFF0F764C),
+              size: 18,
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Optimal Stock Health • All catalog items above warning thresholds.',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0F764C),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final isCritical = outOfStockCount > 0;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isCritical ? const Color(0xFFFEECEB) : const Color(0xFFFFF4E6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isCritical ? const Color(0xFFFDC5C3) : const Color(0xFFFFDFB5),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: isCritical
+                  ? const Color(0xFFFCA5A5)
+                  : const Color(0xFFFDE68A),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isCritical
+                  ? Icons.error_outline_rounded
+                  : Icons.warning_amber_rounded,
+              color: isCritical
+                  ? const Color(0xFF991B1B)
+                  : const Color(0xFF92400E),
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isCritical ? 'Urgent Restock Required' : 'Low Stock Alert',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.bold,
+                    color: isCritical
+                        ? const Color(0xFF991B1B)
+                        : const Color(0xFF92400E),
+                  ),
+                ),
+                Text(
+                  '$lowStockCount low stock, $outOfStockCount depleted item(s).',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isCritical
+                        ? const Color(0xFF7F1D1D)
+                        : const Color(0xFF78350F),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          InkWell(
+            key: const Key('alert_review_button'),
+            onTap: () {
+              setState(() {
+                _selectedIndex = 1;
+                _selectedFilter = isCritical
+                    ? StockFilter.outOfStock
+                    : StockFilter.lowStock;
+              });
+            },
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isCritical
+                      ? const Color(0xFFFDC5C3)
+                      : const Color(0xFFFFDFB5),
+                ),
+              ),
+              child: Text(
+                'Review',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isCritical
+                      ? const Color(0xFF991B1B)
+                      : const Color(0xFF92400E),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Quick actions bar displayed on Dashboard.
+  Widget _buildQuickActionBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              key: const Key('dashboard_add_product_button'),
+              icon: const Icon(Icons.add_circle_outline_rounded, size: 15),
+              label: const Text('Add Product'),
+              onPressed: _navigateToAddProduct,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF5B2EBC),
+                side: const BorderSide(color: Color(0xFFD4C8FA)),
+                padding: const EdgeInsets.symmetric(vertical: 9),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton.icon(
+              key: const Key('dashboard_view_catalog_button'),
+              icon: const Icon(Icons.inventory_2_outlined, size: 15),
+              label: const Text('View Catalog'),
+              onPressed: () {
+                setState(() {
+                  _selectedIndex = 1;
+                });
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF5B2EBC),
+                side: const BorderSide(color: Color(0xFFD4C8FA)),
+                padding: const EdgeInsets.symmetric(vertical: 9),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Interactive threshold indicator pill.
+  Widget _buildThresholdPill() {
+    return InkWell(
+      key: const Key('threshold_settings_button'),
+      borderRadius: BorderRadius.circular(8),
+      onTap: _showThresholdDialog,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3EFFF),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE5DCFD), width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.tune_rounded, size: 11, color: Color(0xFF5B2EBC)),
+            const SizedBox(width: 4),
+            Text(
+              'Threshold: ≤ $_lowStockThreshold',
+              style: const TextStyle(
+                fontSize: 10.5,
+                color: Color(0xFF5B2EBC),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Distinctive App Bar for Page 2 (Products Catalog).
+  PreferredSizeWidget _buildProductsAppBar() {
+    return AppBar(
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      backgroundColor: const Color(0xFF431C9A),
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF5B2EBC), Color(0xFF431C9A)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
-        tooltip: 'Add Product',
+      ),
+      title: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.inventory_2_rounded, size: 20, color: Colors.white),
+          SizedBox(width: 8),
+          Text(
+            'Product Catalog',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.white,
+              letterSpacing: -0.2,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1071,37 +1548,109 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
+  /// Executive store header displaying inventory title and catalog status.
+  Widget _buildDashboardHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Store Inventory',
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF161324),
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Manage store catalog, pricing & stock health',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFF7E7B92),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEBFDF2),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFB9F3CE), width: 1),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.circle, size: 5, color: Color(0xFF10B981)),
+                SizedBox(width: 4),
+                Text(
+                  'Catalog Active',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F764C),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Executive total inventory valuation banner.
   Widget _buildValuationCard({
     required double totalValuation,
     required int totalCount,
+    required int lowStockCount,
+    required int outOfStockCount,
   }) {
+    final healthyCount = totalCount - lowStockCount - outOfStockCount;
+
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF381473), Color(0xFF5B2EBC)],
+          colors: [Color(0xFF260D59), Color(0xFF3F168A), Color(0xFF5B2EBC)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.16),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF431C9A).withValues(alpha: 0.24),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: const Color(0xFF431C9A).withValues(alpha: 0.26),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Row(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.account_balance_wallet_outlined,
@@ -1113,58 +1662,94 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       child: Text(
                         'Total Inventory Value',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFFE2D9FC),
                           letterSpacing: 0.1,
                         ),
-                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  '\$${totalValuation.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: -0.3,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3.5,
                 ),
-              ],
-            ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.22),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.insights_rounded,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$totalCount Items',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
+          const SizedBox(height: 4),
+          Text(
+            '\$${totalValuation.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: -0.4,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
+              color: Colors.black.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.22),
-                width: 1,
+                color: Colors.white.withValues(alpha: 0.1),
+                width: 0.8,
               ),
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
-                  Icons.insights_rounded,
-                  color: Colors.white,
+                  Icons.auto_graph_rounded,
                   size: 12,
+                  color: Color(0xFFE2D9FC),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  '$totalCount Items',
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '$healthyCount Optimal  •  $lowStockCount Low  •  $outOfStockCount Depleted',
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFE2D9FC),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -1306,6 +1891,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ],
       ),
       child: TextField(
+        key: const Key('product_search_field'),
         controller: _searchController,
         style: const TextStyle(
           fontSize: 14,
@@ -1529,6 +2115,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
   /// Individual elevated product card with clear product name, category, SKU, price,
   /// delete action, stock status badge, and +/- quantity controls.
   Widget _buildProductCard(Product product) {
+    final status = product.getStockStatus(_lowStockThreshold);
+    final isOutOfStock = status == StockStatus.outOfStock;
+    final isLowStock = status == StockStatus.lowStock;
+
+    final Color statusAccent = isOutOfStock
+        ? const Color(0xFFEF4444)
+        : (isLowStock ? const Color(0xFFF59E0B) : const Color(0xFF10B981));
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       decoration: BoxDecoration(
@@ -1537,148 +2131,173 @@ class _InventoryScreenState extends State<InventoryScreen> {
         border: Border.all(color: const Color(0xFFEAEAEE), width: 1.1),
         boxShadow: AppTheme.cardShadow,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          children: [
-            // Top clickable portion: Category avatar, Name, Category chip, SKU, Price, Delete
-            InkWell(
-              key: Key('edit_product_${product.id}'),
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => _navigateToEditProduct(product),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Category icon avatar tile
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3EFFF),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFFE5DCFD),
-                        width: 1,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: statusAccent, width: 3.5)),
+          ),
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            children: [
+              // Top clickable portion: Category avatar, Name, Category chip, SKU, Price, Delete
+              InkWell(
+                key: Key('edit_product_${product.id}'),
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _navigateToEditProduct(product),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Category icon avatar tile with tailored tinting
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: _getCategoryBg(product.category),
+                        borderRadius: BorderRadius.circular(11),
+                        border: Border.all(
+                          color: _getCategoryColor(product.category)
+                              .withValues(alpha: 0.22),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        _getCategoryIcon(product.category),
+                        color: _getCategoryColor(product.category),
+                        size: 20,
                       ),
                     ),
-                    child: Icon(
-                      _getCategoryIcon(product.category),
-                      color: const Color(0xFF5B2EBC),
-                      size: 19,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
+                    const SizedBox(width: 10),
 
-                  // Product Title, Category capsule, SKU
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF161324),
-                            letterSpacing: -0.1,
+                    // Product Title, Category capsule, SKU
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            product.name,
+                            style: const TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF161324),
+                              letterSpacing: -0.15,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 1.5,
+                          const SizedBox(height: 3.5),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 1.5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF4F3F8),
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                  child: Text(
+                                    product.category,
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF6B687E),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF4F3F8),
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
                                 child: Text(
-                                  product.category,
+                                  '#${product.id}',
                                   style: const TextStyle(
                                     fontSize: 10.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6B687E),
+                                    color: Color(0xFF9E9CAF),
+                                    fontWeight: FontWeight.w500,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                '#${product.id}',
-                                style: const TextStyle(
-                                  fontSize: 10.5,
-                                  color: Color(0xFF9E9CAF),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Price and Delete Button
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '\$${product.price.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF5B2EBC),
-                          letterSpacing: -0.2,
-                        ),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 4),
-                      Tooltip(
-                        message: 'Delete product',
-                        child: InkWell(
-                          key: Key('delete_product_${product.id}'),
-                          borderRadius: BorderRadius.circular(6),
-                          onTap: () => _confirmDeleteProduct(product),
-                          child: const Padding(
-                            padding: EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.delete_outline_rounded,
-                              size: 16,
-                              color: Color(0xFF9E9CAF),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Price & Delete action
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3EFFF),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '\$${product.price.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF5B2EBC),
+                              letterSpacing: -0.2,
                             ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        Tooltip(
+                          message: 'Delete product',
+                          child: InkWell(
+                            key: Key('delete_product_${product.id}'),
+                            borderRadius: BorderRadius.circular(6),
+                            onTap: () => _confirmDeleteProduct(product),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.delete_outline_rounded,
+                                size: 17,
+                                color: Color(0xFF9E9CAF),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 8),
+              const Divider(height: 1, thickness: 1, color: Color(0xFFF2F2F6)),
+              const SizedBox(height: 8),
+
+              // Bottom row: Stock status badge on left, Quantity stepper on right
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(child: _buildStockBadge(product)),
+                  const SizedBox(width: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildQuantityStepper(product),
+                      if (MediaQuery.of(context).size.width > 600)
+                        const SizedBox(width: 72),
                     ],
                   ),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 8),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFF2F2F6)),
-            const SizedBox(height: 8),
-
-            // Bottom row: Stock status badge on left, Quantity stepper on right
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(child: _buildStockBadge(product)),
-                const SizedBox(width: 6),
-                _buildQuantityStepper(product),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../models/product.dart';
+import '../theme/app_theme.dart';
 
 /// Screen for adding a new product or editing an existing product.
 ///
-/// Designed to match the StockMate premium purple dashboard visual identity.
-/// In Week 1 Day 1, form inputs and navigation are interactive while persistence
-/// will be connected in subsequent milestones.
+/// Redesigned with an executive single-card layout that groups form fields into
+/// clear visual sections (Product Details, Categorization, Pricing & Stock Control),
+/// provides quick-selection chips, live batch valuation preview, and responsive sizing.
 class AddEditProductScreen extends StatefulWidget {
   final Product? product;
   final int lowStockThreshold;
@@ -46,10 +47,21 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _quantityController = TextEditingController(
       text: widget.product != null ? widget.product!.quantity.toString() : '',
     );
+
+    _priceController.addListener(_onValuesChanged);
+    _quantityController.addListener(_onValuesChanged);
+    _categoryController.addListener(_onValuesChanged);
+  }
+
+  void _onValuesChanged() {
+    setState(() {});
   }
 
   @override
   void dispose() {
+    _priceController.removeListener(_onValuesChanged);
+    _quantityController.removeListener(_onValuesChanged);
+    _categoryController.removeListener(_onValuesChanged);
     _nameController.dispose();
     _categoryController.dispose();
     _priceController.dispose();
@@ -89,7 +101,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   }
 
   void _handleSave() {
-    // Validate all form fields; if invalid, activate inline validation feedback
     if (!_formKey.currentState!.validate()) {
       setState(() {
         _autovalidateMode = AutovalidateMode.onUserInteraction;
@@ -103,7 +114,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     final price = double.parse(_priceController.text.trim());
     final quantity = int.parse(_quantityController.text.trim());
 
-    // Create or update the product model with a clean, readable ID
     final idSuffix = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     final cleanId = idSuffix.length > 8 ? idSuffix.substring(0, 8) : idSuffix;
     final product = Product(
@@ -114,7 +124,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       category: category,
     );
 
-    // Return the new/updated product back to the inventory screen
     Navigator.pop(context, product);
   }
 
@@ -125,6 +134,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       appBar: AppBar(
         titleSpacing: 0,
         leading: IconButton(
+          key: const Key('add_edit_back_button'),
           icon: const Icon(
             Icons.arrow_back_ios_new_rounded,
             color: Colors.white,
@@ -143,6 +153,42 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         ),
         backgroundColor: const Color(0xFF5B2EBC),
         elevation: 0,
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _isEditing
+                      ? Icons.edit_note_rounded
+                      : Icons.add_circle_outline_rounded,
+                  size: 14,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _isEditing ? 'EDITING' : 'NEW ITEM',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Center(
@@ -150,8 +196,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
             constraints: const BoxConstraints(maxWidth: 680),
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
-                horizontal: 18.0,
-                vertical: 16.0,
+                horizontal: 16.0,
+                vertical: 12.0,
               ),
               child: Form(
                 key: _formKey,
@@ -161,202 +207,22 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                   children: [
                     // Contextual Hero Banner
                     _buildHeroBanner(),
+                    const SizedBox(height: 12),
+
+                    // Main Product Card
+                    _buildMainFormCard(),
                     const SizedBox(height: 14),
 
-                    // Form card container
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF161324)
-                                .withValues(alpha: 0.04),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                        border: Border.all(
-                          color: const Color(0xFFEAEAEE),
-                          width: 1.2,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Expanded(
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.feed_outlined,
-                                      size: 18,
-                                      color: Color(0xFF5B2EBC),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'Product Information',
-                                        style: TextStyle(
-                                          fontSize: 15.5,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF161324),
-                                          letterSpacing: -0.2,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF3F2F8),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  'Catalog Details',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6B687E),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 18),
-
-                          // Product Name field
-                          _buildTextField(
-                            fieldKey: const Key('product_name_field'),
-                            controller: _nameController,
-                            label: 'Product Name',
-                            hint: 'e.g., Wireless Ergonomic Mouse',
-                            icon: Icons.inventory_2_outlined,
-                            validator: _validateName,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Category field (Optional)
-                          _buildTextField(
-                            fieldKey: const Key('product_category_field'),
-                            controller: _categoryController,
-                            label: 'Category',
-                            hint: 'e.g., Electronics, Accessories, Office',
-                            icon: Icons.category_outlined,
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Quick Category Suggestion Chips
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children:
-                                [
-                                  '+ Electronics',
-                                  '+ Accessories',
-                                  '+ Office',
-                                  '+ Peripherals',
-                                ].map((suggestion) {
-                                  final catName = suggestion
-                                      .replaceAll('+', '')
-                                      .trim();
-                                  final isSelected =
-                                      _categoryController.text
-                                          .trim()
-                                          .toLowerCase() ==
-                                      catName.toLowerCase();
-                                  return InkWell(
-                                    borderRadius: BorderRadius.circular(8),
-                                    onTap: () {
-                                      setState(() {
-                                        _categoryController.text = catName;
-                                      });
-                                    },
-                                    child: AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 150,
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 9,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? const Color(0xFF5B2EBC)
-                                            : const Color(0xFFF3EFFF),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? const Color(0xFF5B2EBC)
-                                              : const Color(0xFFE5DCFD),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        suggestion,
-                                        style: TextStyle(
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.bold,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : const Color(0xFF5B2EBC),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Price field
-                          _buildTextField(
-                            fieldKey: const Key('product_price_field'),
-                            controller: _priceController,
-                            label: 'Price (\$)',
-                            hint: 'e.g., 29.99',
-                            icon: Icons.attach_money_rounded,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            validator: _validatePrice,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Quantity field
-                          _buildTextField(
-                            fieldKey: const Key('product_quantity_field'),
-                            controller: _quantityController,
-                            label: 'Quantity in Stock',
-                            hint: 'e.g., 25',
-                            icon: Icons.numbers_rounded,
-                            keyboardType: TextInputType.number,
-                            validator: _validateQuantity,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Primary Save / Update button
+                    // Primary Save / Update Button
                     ElevatedButton(
                       key: const Key('save_product_button'),
                       onPressed: _handleSave,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF5B2EBC),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(13),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         elevation: 2,
                         shadowColor: const Color(0xFF5B2EBC)
@@ -368,13 +234,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                           const Icon(
                             Icons.check_rounded,
                             color: Colors.white,
-                            size: 20,
+                            size: 19,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             _isEditing ? 'Update Product' : 'Save Product',
                             style: const TextStyle(
-                              fontSize: 15.5,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                               letterSpacing: 0.1,
@@ -383,9 +249,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
 
-                    // Secondary Cancel button
+                    // Secondary Cancel Button
                     OutlinedButton(
                       key: const Key('cancel_product_button'),
                       onPressed: () => Navigator.pop(context),
@@ -393,17 +259,17 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         foregroundColor: const Color(0xFF5B2EBC),
                         side: const BorderSide(
                           color: Color(0xFFD4C8FA),
-                          width: 1.2,
+                          width: 1.1,
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(13),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: const Text(
                         'Cancel',
                         style: TextStyle(
-                          fontSize: 14.5,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF5B2EBC),
                         ),
@@ -420,33 +286,33 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
   }
 
-  /// Informational hero banner distinguishing Add vs Edit workflows.
+  /// Informational Hero Banner with SKU, mode, and workflow advice.
   Widget _buildHeroBanner() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFEAEAEE), width: 1.1),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF161324).withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: AppTheme.border, width: 1.1),
+        boxShadow: AppTheme.cardShadow,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(7),
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFFF3EFFF),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF5B2EBC), Color(0xFF431C9A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               _isEditing ? Icons.edit_note_rounded : Icons.add_business_rounded,
-              color: const Color(0xFF5B2EBC),
+              color: Colors.white,
               size: 20,
             ),
           ),
@@ -455,23 +321,59 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _isEditing ? 'Update Inventory Item' : 'New Inventory Item',
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF161324),
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _isEditing
+                            ? 'Update Inventory Item'
+                            : 'New Inventory Item',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF161324),
+                          letterSpacing: -0.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (_isEditing && widget.product != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3EFFF),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                            color: const Color(0xFFD4C8FA),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Text(
+                          '#${widget.product!.id}',
+                          style: const TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF5B2EBC),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   _isEditing
-                      ? 'Modify product specifications, pricing, and recorded stock counts.'
+                      ? 'Modify product specifications, unit pricing, and recorded stock counts.'
                       : 'Register a new item into your small business inventory catalog.',
                   style: const TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     color: Color(0xFF6B687E),
-                    height: 1.3,
+                    height: 1.25,
                   ),
                 ),
               ],
@@ -479,6 +381,359 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Master Executive Form Card containing organized sections: Identity, Category & Chips, Pricing & Stock.
+  Widget _buildMainFormCard() {
+    final parsedPrice = double.tryParse(_priceController.text.trim()) ?? 0.0;
+    final parsedQty = int.tryParse(_quantityController.text.trim()) ?? 0;
+    final batchValuation = parsedPrice * parsedQty;
+
+    final bool isDepleted = parsedQty == 0;
+    final bool isLowStock =
+        parsedQty > 0 && parsedQty <= widget.lowStockThreshold;
+
+    final Color statusColor;
+    final Color statusBg;
+    final String statusLabel;
+    final IconData statusIcon;
+
+    if (isDepleted) {
+      statusColor = const Color(0xFFC02626);
+      statusBg = const Color(0xFFFEECEB);
+      statusLabel = 'Out of Stock (0 units)';
+      statusIcon = Icons.remove_circle_outline_rounded;
+    } else if (isLowStock) {
+      statusColor = const Color(0xFFD97706);
+      statusBg = const Color(0xFFFFFBEB);
+      statusLabel = 'Low Stock (≤ ${widget.lowStockThreshold} units)';
+      statusIcon = Icons.warning_amber_rounded;
+    } else {
+      statusColor = const Color(0xFF0F764C);
+      statusBg = const Color(0xFFE6F7F0);
+      statusLabel = 'Optimal Level (> ${widget.lowStockThreshold} units)';
+      statusIcon = Icons.check_circle_outline_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border, width: 1.1),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section 1 Header: Product Identity
+          _buildCardSectionHeader(
+            icon: Icons.badge_outlined,
+            title: 'Product Information',
+            badgeText: 'Required',
+            badgeBg: const Color(0xFFF3EFFF),
+            badgeColor: const Color(0xFF5B2EBC),
+          ),
+          const SizedBox(height: 12),
+
+          // Product Name
+          _buildTextField(
+            fieldKey: const Key('product_name_field'),
+            controller: _nameController,
+            label: 'Product Name',
+            hint: 'e.g., Wireless Ergonomic Mouse',
+            icon: Icons.inventory_2_outlined,
+            validator: _validateName,
+          ),
+          const SizedBox(height: 12),
+
+          // Category Field
+          _buildTextField(
+            fieldKey: const Key('product_category_field'),
+            controller: _categoryController,
+            label: 'Category',
+            hint: 'e.g., Electronics, Accessories, Office',
+            icon: Icons.category_outlined,
+          ),
+          const SizedBox(height: 8),
+
+          // Category Quick-Select Chips
+          Wrap(
+            spacing: 6,
+            runSpacing: 5,
+            children:
+                [
+                  '+ Electronics',
+                  '+ Accessories',
+                  '+ Office',
+                  '+ Peripherals',
+                  '+ General',
+                ].map((suggestion) {
+                  final catName = suggestion.replaceAll('+', '').trim();
+                  final isSelected =
+                      _categoryController.text.trim().toLowerCase() ==
+                      catName.toLowerCase();
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(7),
+                    onTap: () {
+                      setState(() {
+                        _categoryController.text = catName;
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3.5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF5B2EBC)
+                            : const Color(0xFFF3EFFF),
+                        borderRadius: BorderRadius.circular(7),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFF5B2EBC)
+                              : const Color(0xFFE5DCFD),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isSelected) ...[
+                            const Icon(
+                              Icons.check_rounded,
+                              size: 11,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 3),
+                          ],
+                          Text(
+                            suggestion,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF5B2EBC),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+          ),
+          const SizedBox(height: 14),
+          const Divider(height: 1, thickness: 0.9, color: Color(0xFFEAEAEE)),
+          const SizedBox(height: 14),
+
+          // Section 2 Header: Pricing & Stock Control
+          _buildCardSectionHeader(
+            icon: Icons.monetization_on_outlined,
+            title: 'Pricing & Stock Level',
+            badgeText: 'Live Sync',
+            badgeBg: const Color(0xFFF3F2F8),
+            badgeColor: const Color(0xFF6B687E),
+          ),
+          const SizedBox(height: 12),
+
+          // Responsive Price and Quantity fields
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth >= 380) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        fieldKey: const Key('product_price_field'),
+                        controller: _priceController,
+                        label: 'Price (\$)',
+                        hint: 'e.g., 29.99',
+                        icon: Icons.attach_money_rounded,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: _validatePrice,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildTextField(
+                        fieldKey: const Key('product_quantity_field'),
+                        controller: _quantityController,
+                        label: 'Quantity in Stock',
+                        hint: 'e.g., 25',
+                        icon: Icons.numbers_rounded,
+                        keyboardType: TextInputType.number,
+                        validator: _validateQuantity,
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    _buildTextField(
+                      fieldKey: const Key('product_price_field'),
+                      controller: _priceController,
+                      label: 'Price (\$)',
+                      hint: 'e.g., 29.99',
+                      icon: Icons.attach_money_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      validator: _validatePrice,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTextField(
+                      fieldKey: const Key('product_quantity_field'),
+                      controller: _quantityController,
+                      label: 'Quantity in Stock',
+                      hint: 'e.g., 25',
+                      icon: Icons.numbers_rounded,
+                      keyboardType: TextInputType.number,
+                      validator: _validateQuantity,
+                    ),
+                  ],
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+
+          // Compact Live Catalog Preview Pill Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9F9FC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFEAEAEE), width: 1),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusBg,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(statusIcon, size: 11, color: statusColor),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            statusLabel,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: statusColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Batch: ',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF6B687E),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      '\$${batchValuation.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF5B2EBC),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Reusable Card Section Header
+  Widget _buildCardSectionHeader({
+    required IconData icon,
+    required String title,
+    required String badgeText,
+    required Color badgeBg,
+    required Color badgeColor,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3EFFF),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Icon(icon, size: 16, color: const Color(0xFF5B2EBC)),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF161324),
+                    letterSpacing: -0.1,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: badgeBg,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            badgeText,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: badgeColor,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

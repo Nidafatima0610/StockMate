@@ -5,20 +5,22 @@ import '../theme/app_theme.dart';
 
 /// Screen displaying the chronological audit trail of all inventory quantity adjustments.
 ///
-/// Features:
-/// - Newest movements displayed first
-/// - Color-coded movement types (Stock In / Stock Out / Adjustment)
-/// - Filtering by movement type
-/// - Clear quantity transitions (previous -> new)
+/// Redesigned with an executive audit ledger style:
+/// - Quick Summary KPI metrics (Stock In, Stock Out, Total Logs)
+/// - Modern search and movement-type filter controls
+/// - Ledger-style cards with directional icons, SKU pills, delta badges, and timestamp
 /// - Graceful handling of deleted products
+/// - Empty state for zero records or unmatched search queries
 class StockHistoryScreen extends StatefulWidget {
   final List<StockMovement> movements;
   final Set<String> activeProductIds;
+  final VoidCallback? onBackToDashboard;
 
   const StockHistoryScreen({
     super.key,
     required this.movements,
     this.activeProductIds = const {},
+    this.onBackToDashboard,
   });
 
   @override
@@ -49,7 +51,6 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
   /// Returns movements sorted newest first, filtered by type and search query.
   List<StockMovement> get _filteredMovements {
     final list = List<StockMovement>.from(widget.movements);
-    // Ensure newest first
     list.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
     return list.where((m) {
@@ -95,6 +96,13 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
     final filtered = _filteredMovements;
     final totalMovements = widget.movements.length;
 
+    final increaseCount = widget.movements
+        .where((m) => m.movementType == StockMovementType.increase)
+        .length;
+    final decreaseCount = widget.movements
+        .where((m) => m.movementType == StockMovementType.decrease)
+        .length;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7FC),
       appBar: AppBar(
@@ -106,7 +114,13 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
             color: Colors.white,
             size: 18,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else if (widget.onBackToDashboard != null) {
+              widget.onBackToDashboard!();
+            }
+          },
         ),
         title: const Text(
           'Stock Movement History',
@@ -148,9 +162,9 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
             constraints: const BoxConstraints(maxWidth: 820),
             child: Column(
               children: [
-                // Controls header: Search bar and Movement Type Filter chips
+                // Top controls container: Audit KPI Summary + Search + Filters
                 Container(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     border: const Border(
@@ -166,6 +180,41 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
                   ),
                   child: Column(
                     children: [
+                      // Audit KPI metrics banner (only shown if there are movements)
+                      if (totalMovements > 0) ...[
+                        Row(
+                          children: [
+                            _buildKpiCard(
+                              title: 'Inflow',
+                              value: '+$increaseCount logs',
+                              icon: Icons.south_west_rounded,
+                              iconColor: const Color(0xFF0F764C),
+                              bgColor: const Color(0xFFE6F7F0),
+                              borderColor: const Color(0xFFB8ECCF),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildKpiCard(
+                              title: 'Outflow',
+                              value: '-$decreaseCount logs',
+                              icon: Icons.north_east_rounded,
+                              iconColor: const Color(0xFFC02626),
+                              bgColor: const Color(0xFFFEECEB),
+                              borderColor: const Color(0xFFFDC5C3),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildKpiCard(
+                              title: 'Audit Total',
+                              value: '$totalMovements records',
+                              icon: Icons.receipt_long_rounded,
+                              iconColor: const Color(0xFF5B2EBC),
+                              bgColor: const Color(0xFFF3EFFF),
+                              borderColor: const Color(0xFFE5DCFD),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
                       // Search input
                       Container(
                         height: 40,
@@ -178,6 +227,7 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
                           ),
                         ),
                         child: TextField(
+                          key: const Key('history_search_field'),
                           controller: _searchController,
                           style: const TextStyle(
                             fontSize: 13.5,
@@ -214,6 +264,7 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
                         ),
                       ),
                       const SizedBox(height: 10),
+
                       // Filter chips
                       Row(
                         children: [
@@ -226,26 +277,14 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
                           _buildTypeFilterChip(
                             label: 'Stock In',
                             type: StockMovementType.increase,
-                            count: widget.movements
-                                .where(
-                                  (m) =>
-                                      m.movementType ==
-                                      StockMovementType.increase,
-                                )
-                                .length,
+                            count: increaseCount,
                             activeColor: const Color(0xFF0F764C),
                           ),
                           const SizedBox(width: 8),
                           _buildTypeFilterChip(
                             label: 'Stock Out',
                             type: StockMovementType.decrease,
-                            count: widget.movements
-                                .where(
-                                  (m) =>
-                                      m.movementType ==
-                                      StockMovementType.decrease,
-                                )
-                                .length,
+                            count: decreaseCount,
                             activeColor: const Color(0xFFC02626),
                           ),
                         ],
@@ -274,6 +313,61 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Compact executive KPI card for top audit summary
+  Widget _buildKpiCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    required Color borderColor,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderColor, width: 1),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: iconColor),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF6B687E),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: iconColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -365,13 +459,13 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
       badgeBg = const Color(0xFFE6F7F0);
       badgeBorder = const Color(0xFFB8ECCF);
       badgeColor = const Color(0xFF0F764C);
-      icon = Icons.arrow_upward_rounded;
+      icon = Icons.south_west_rounded;
       sign = '+';
     } else if (isDecrease) {
       badgeBg = const Color(0xFFFEECEB);
       badgeBorder = const Color(0xFFFDC5C3);
       badgeColor = const Color(0xFFC02626);
-      icon = Icons.arrow_downward_rounded;
+      icon = Icons.north_east_rounded;
       sign = '-';
     } else {
       badgeBg = const Color(0xFFF3EFFF);
@@ -385,186 +479,283 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.border, width: 1.1),
+        border: Border.all(color: const Color(0xFFEAEAEE), width: 1.1),
         boxShadow: AppTheme.cardShadow,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top row: Type Icon, Product Name, SKU, and Magnitude Badge
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: badgeColor, width: 3.5)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Circular movement type indicator
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: badgeBorder, width: 1),
-                ),
-                child: Icon(icon, color: badgeColor, size: 18),
-              ),
-              const SizedBox(width: 10),
+              // Top row: Type Icon, Product Name, SKU, and Magnitude Badge
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Circular movement type indicator
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: badgeBorder, width: 1),
+                    ),
+                    child: Icon(icon, color: badgeColor, size: 18),
+                  ),
+                  const SizedBox(width: 10),
 
-              // Product Name and SKU
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                  // Product Name and SKU
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            movement.productName,
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1B1829),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                movement.productName,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1B1829),
+                                  letterSpacing: -0.1,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            if (isDeleted) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF4F3F8),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: const Color(0xFFDCD9E6),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Deleted',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF7E7B92),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                        if (isDeleted) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF4F3F8),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: const Color(0xFFDCD9E6),
-                                width: 0.8,
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF3F2F8),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '#${movement.productId}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF7E7B92),
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                            child: const Text(
-                              'Deleted',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF7E7B92),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                isIncrease
+                                    ? 'Stock Restock'
+                                    : isDecrease
+                                    ? 'Stock Deduction'
+                                    : 'Manual Adjustment',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: badgeColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '#${movement.productId}',
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        color: Color(0xFF9E9CAF),
-                        fontWeight: FontWeight.w500,
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Quantity Change Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: badgeBorder, width: 1),
+                    ),
+                    child: Text(
+                      '$sign${movement.quantityChanged}',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: badgeColor,
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // Quantity Change Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: badgeBorder, width: 1),
-                ),
-                child: Text(
-                  '$sign${movement.quantityChanged}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: badgeColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-          const Divider(height: 1, thickness: 0.8, color: Color(0xFFF1F1F6)),
-          const SizedBox(height: 8),
-
-          // Bottom row: Transition (Previous -> New), Reason / Note, and Timestamp
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Quantity Transition
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Qty: ',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF7E7B92),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    '${movement.previousQuantity}',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF555268),
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4),
-                    child: Icon(
-                      Icons.arrow_forward_rounded,
-                      size: 11,
-                      color: Color(0xFF9E9CAF),
-                    ),
-                  ),
-                  Text(
-                    '${movement.newQuantity}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: badgeColor,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(width: 8),
 
-              // Timestamp
-              Flexible(
-                child: Text(
-                  _formatDateTime(movement.timestamp),
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    color: Color(0xFF9E9CAF),
-                    fontWeight: FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                ),
+              const SizedBox(height: 10),
+              const Divider(
+                height: 1,
+                thickness: 0.8,
+                color: Color(0xFFF1F1F6),
               ),
+              const SizedBox(height: 8),
+
+              // Bottom row: Transition (Previous -> New), Reason / Note, and Timestamp
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Quantity Transition
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F7FC),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: const Color(0xFFEAEAEE),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Qty: ',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF7E7B92),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          '${movement.previousQuantity}',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF555268),
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4),
+                          child: Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 11,
+                            color: Color(0xFF9E9CAF),
+                          ),
+                        ),
+                        Text(
+                          '${movement.newQuantity}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: badgeColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Timestamp with clock icon
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.access_time_rounded,
+                          size: 11,
+                          color: Color(0xFF9E9CAF),
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            _formatDateTime(movement.timestamp),
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              color: Color(0xFF9E9CAF),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              if (movement.note != null &&
+                  movement.note!.trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F7FC),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.sticky_note_2_outlined,
+                        size: 12,
+                        color: Color(0xFF9E9CAF),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          movement.note!,
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontStyle: FontStyle.italic,
+                            color: Color(0xFF6B687E),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
-
-          if (movement.note != null && movement.note!.trim().isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              movement.note!,
-              style: const TextStyle(
-                fontSize: 10,
-                fontStyle: FontStyle.italic,
-                color: Color(0xFF9E9CAF),
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -577,14 +768,15 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF3EFFF),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3EFFF),
                 shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFE5DCFD), width: 1.5),
               ),
               child: const Icon(
-                Icons.history_toggle_off_rounded,
-                size: 42,
+                Icons.receipt_long_rounded,
+                size: 44,
                 color: Color(0xFF5B2EBC),
               ),
             ),
@@ -592,7 +784,7 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
             const Text(
               'No Stock Movements Found',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 16.5,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF1B1829),
               ),

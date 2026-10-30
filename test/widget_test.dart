@@ -215,7 +215,7 @@ void main() {
       // Verify stock status badges
       expect(find.text('In Stock'), findsOneWidget);
       expect(find.text('Low Stock (3)'), findsOneWidget);
-      expect(find.text('Out of Stock'), findsNWidgets(3));
+      expect(find.text('Out of Stock'), findsNWidgets(2));
 
       // Verify prices are formatted properly
       expect(find.text('\$29.99'), findsOneWidget);
@@ -230,6 +230,10 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(const StockMateApp());
+      await tester.pumpAndSettle();
+
+      // Navigate to Products tab where search bar is located
+      await tester.tap(find.byKey(const Key('nav_products')));
       await tester.pumpAndSettle();
 
       // Search field is present
@@ -261,6 +265,10 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(const StockMateApp());
+      await tester.pumpAndSettle();
+
+      // Navigate to Products tab where stock status filter chips reside
+      await tester.tap(find.byKey(const Key('nav_products')));
       await tester.pumpAndSettle();
 
       // Tap on 'Low Stock' filter chip
@@ -298,6 +306,10 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(const StockMateApp());
+      await tester.pumpAndSettle();
+
+      // Navigate to Products tab
+      await tester.tap(find.byKey(const Key('nav_products')));
       await tester.pumpAndSettle();
 
       final searchField = find.byType(TextField);
@@ -359,9 +371,15 @@ void main() {
         await tester.pumpWidget(const StockMateApp());
         await tester.pumpAndSettle();
 
+        // Navigate to Products tab
+        await tester.tap(find.byKey(const Key('nav_products')));
+        await tester.pumpAndSettle();
+
         // Tap on the mechanical keyboard product row
         final productCard = find.text('Mechanical Gaming Keyboard');
         expect(productCard, findsOneWidget);
+        await tester.ensureVisible(productCard);
+        await tester.pumpAndSettle();
         await tester.tap(productCard);
         await tester.pumpAndSettle();
 
@@ -378,8 +396,8 @@ void main() {
         await tester.tap(saveButton);
         await tester.pumpAndSettle();
 
-        // Verify returned to Inventory screen with feedback SnackBar
-        expect(find.text('StockMate'), findsOneWidget);
+        // Verify returned to Products screen with feedback SnackBar
+        expect(find.text('Product Catalog'), findsOneWidget);
         expect(find.textContaining('updated!'), findsOneWidget);
       },
     );
@@ -584,6 +602,10 @@ void main() {
           findsOneWidget,
         );
 
+        // Navigate to Products tab to search
+        await tester.tap(find.byKey(const Key('nav_products')));
+        await tester.pumpAndSettle();
+
         // Search for the newly added product
         final searchField = find.byType(TextField);
         await tester.enterText(searchField, 'Headset');
@@ -598,6 +620,10 @@ void main() {
       'Adding product with empty category defaults to General and quantity 0 is Out of Stock',
       (WidgetTester tester) async {
         await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // Navigate to Products tab so category chips and full catalog are visible
+        await tester.tap(find.byKey(const Key('nav_products')));
         await tester.pumpAndSettle();
 
         await tester.tap(find.byTooltip('Add Product'));
@@ -636,12 +662,18 @@ void main() {
         await tester.pumpWidget(const StockMateApp());
         await tester.pumpAndSettle();
 
+        // Navigate to Products tab
+        await tester.tap(find.byKey(const Key('nav_products')));
+        await tester.pumpAndSettle();
+
         // Keyboard starts with qty 3 (Low Stock)
         expect(find.text('Low Stock (3)'), findsOneWidget);
 
         // Tap + button for Mechanical Gaming Keyboard (prod-002)
         final incrementBtn = find.byKey(const Key('increment_qty_prod-002'));
         expect(incrementBtn, findsOneWidget);
+        await tester.ensureVisible(incrementBtn);
+        await tester.pumpAndSettle();
         await tester.tap(incrementBtn);
         await tester.pumpAndSettle();
 
@@ -664,6 +696,10 @@ void main() {
       'Quick quantity decrement (-) decrements stock and safely clamps at 0',
       (WidgetTester tester) async {
         await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // Navigate to Products tab
+        await tester.tap(find.byKey(const Key('nav_products')));
         await tester.pumpAndSettle();
 
         // Decrement button for prod-003 is disabled at 0
@@ -700,13 +736,15 @@ void main() {
         await tester.pumpWidget(const StockMateApp());
         await tester.pumpAndSettle();
 
+        // Navigate to Products tab
+        await tester.tap(find.byKey(const Key('nav_products')));
+        await tester.pumpAndSettle();
+
         expect(find.text('Products (3)'), findsOneWidget);
 
         // Tap delete button for Adapter (prod-003)
         final deleteBtn = find.byKey(const Key('delete_product_prod-003'));
         expect(deleteBtn, findsOneWidget);
-        await tester.ensureVisible(deleteBtn);
-        await tester.pumpAndSettle();
         await tester.tap(deleteBtn);
         await tester.pumpAndSettle();
 
@@ -757,6 +795,10 @@ void main() {
       await tester.pumpWidget(const StockMateApp());
       await tester.pumpAndSettle();
 
+      // Navigate to Products tab
+      await tester.tap(find.byKey(const Key('nav_products')));
+      await tester.pumpAndSettle();
+
       // Tap Sort button
       final sortButton = find.byKey(const Key('sort_button'));
       expect(sortButton, findsOneWidget);
@@ -791,6 +833,10 @@ void main() {
       await tester.pumpWidget(const StockMateApp());
       await tester.pumpAndSettle();
 
+      // Navigate to Products tab
+      await tester.tap(find.byKey(const Key('nav_products')));
+      await tester.pumpAndSettle();
+
       // Tap Accessories category chip
       final accessoriesChip = find.byKey(
         const Key('category_chip_Accessories'),
@@ -820,6 +866,10 @@ void main() {
       'Editing product name, price, quantity, and category saves changes and updates catalog, badges, and metrics immediately',
       (WidgetTester tester) async {
         await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // Navigate to Products tab for catalog editing
+        await tester.tap(find.byKey(const Key('nav_products')));
         await tester.pumpAndSettle();
 
         // 1. Initial State: Mechanical Gaming Keyboard has qty 3 ($89.50) -> Low Stock
@@ -867,8 +917,8 @@ void main() {
         await tester.tap(updateBtn);
         await tester.pumpAndSettle();
 
-        // 6. Verify back on Inventory Dashboard with SnackBar
-        expect(find.text('StockMate'), findsOneWidget);
+        // 6. Verify back on Products screen with SnackBar
+        expect(find.text('Product Catalog'), findsOneWidget);
         expect(
           find.text('Mechanical Gaming Keyboard RGB Pro updated!'),
           findsOneWidget,
@@ -890,10 +940,13 @@ void main() {
         // 8. Verify stock badge transitioned from Low Stock to In Stock
         // Mouse (24) and Keyboard (15) are now both In Stock
         expect(find.text('In Stock'), findsNWidgets(2));
-        // Low Stock count tile is now 0
+        // Low Stock count is now 0
         expect(find.text('Low Stock (3)'), findsNothing);
 
-        // 9. Total Valuation updated: (24 * 29.99) + (15 * 129.99) + (0 * 19.00) = 719.76 + 1949.85 = $2669.61
+        // 9. Navigate back to Dashboard to verify Total Valuation
+        await tester.tap(find.byKey(const Key('nav_dashboard')));
+        await tester.pumpAndSettle();
+        // Total Valuation updated: (24 * 29.99) + (15 * 129.99) + (0 * 19.00) = 719.76 + 1949.85 = $2669.61
         expect(find.text('\$2669.61'), findsOneWidget);
       },
     );
@@ -902,6 +955,10 @@ void main() {
       'Edit product form validation enforces non-empty name, positive price, and non-negative integer quantity',
       (WidgetTester tester) async {
         await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // Navigate to Products tab
+        await tester.tap(find.byKey(const Key('nav_products')));
         await tester.pumpAndSettle();
 
         // Open edit screen for Mouse
@@ -988,6 +1045,10 @@ void main() {
         await tester.pumpWidget(const StockMateApp());
         await tester.pumpAndSettle();
 
+        // Navigate to Products tab
+        await tester.tap(find.byKey(const Key('nav_products')));
+        await tester.pumpAndSettle();
+
         // Edit Mouse (qty 24) to qty 0
         final mouseRow = find.byKey(const Key('edit_product_prod-001'));
         await tester.ensureVisible(mouseRow);
@@ -1008,11 +1069,134 @@ void main() {
 
         // Mouse is now Out of Stock
         expect(find.text('Wireless Ergonomic Mouse updated!'), findsOneWidget);
-        // Adapter and Mouse are now both Out of Stock
-        expect(
-          find.text('Out of Stock'),
-          findsNWidgets(4),
-        ); // Header metric + chips + badges
+        // On Products tab, Out of Stock filter chip (1) + Adapter badge (1) + Mouse badge (1) = 3
+        expect(find.text('Out of Stock'), findsNWidgets(3));
+
+        // Switch to Dashboard tab to verify the header metrics and overview
+        await tester.tap(find.byKey(const Key('nav_dashboard')));
+        await tester.pumpAndSettle();
+
+        // Header metric card shows Out of Stock tile with 2 items
+        expect(find.text('Out of Stock'), findsWidgets);
+        expect(find.text('2'), findsWidgets);
+      },
+    );
+  });
+
+  group('4-Page Navigation and Integration tests', () {
+    testWidgets(
+      'Bottom navigation bar switches cleanly between all four destinations',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // Destination 1: Dashboard is active by default
+        expect(find.text('Total Inventory Value'), findsOneWidget);
+        expect(find.byKey(const Key('nav_dashboard')), findsOneWidget);
+
+        // Destination 2: Products
+        await tester.tap(find.byKey(const Key('nav_products')));
+        await tester.pumpAndSettle();
+        expect(find.text('Product Catalog'), findsOneWidget);
+        expect(find.byKey(const Key('product_search_field')), findsOneWidget);
+
+        // Destination 3: Stock History
+        await tester.tap(find.byKey(const Key('nav_history')));
+        await tester.pumpAndSettle();
+        expect(find.text('Stock Movement History'), findsOneWidget);
+        expect(find.byKey(const Key('history_search_field')), findsOneWidget);
+
+        // Destination 4: Settings
+        await tester.tap(find.byKey(const Key('nav_settings')));
+        await tester.pumpAndSettle();
+        expect(find.text('Settings & Rules'), findsOneWidget);
+        expect(find.text('Low-Stock Threshold Rule'), findsOneWidget);
+
+        // Return back to Dashboard
+        await tester.tap(find.byKey(const Key('nav_dashboard')));
+        await tester.pumpAndSettle();
+        expect(find.text('Total Inventory Value'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Product changes reflect across Dashboard, Products, and Stock History',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // Add a product from Dashboard FAB
+        await tester.tap(find.byTooltip('Add Product'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('product_name_field')),
+          'Audit Ledger Item',
+        );
+        await tester.enterText(
+          find.byKey(const Key('product_price_field')),
+          '50.00',
+        );
+        await tester.enterText(
+          find.byKey(const Key('product_quantity_field')),
+          '10',
+        );
+        final saveBtn = find.byKey(const Key('save_product_button'));
+        await tester.ensureVisible(saveBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(saveBtn);
+        await tester.pumpAndSettle();
+
+        // 1. Reflected on Dashboard
+        expect(find.text('Products (4)'), findsOneWidget);
+        expect(find.text('Audit Ledger Item'), findsOneWidget);
+
+        // 2. Reflected on Products
+        await tester.tap(find.byKey(const Key('nav_products')));
+        await tester.pumpAndSettle();
+        expect(find.text('Products (4)'), findsOneWidget);
+        expect(find.text('Audit Ledger Item'), findsOneWidget);
+
+        // 3. Reflected on Stock History
+        await tester.tap(find.byKey(const Key('nav_history')));
+        await tester.pumpAndSettle();
+        expect(find.text('Audit Ledger Item'), findsOneWidget);
+        expect(find.text('+10'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Threshold changes reflect across Dashboard, Products, and Settings',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(const StockMateApp());
+        await tester.pumpAndSettle();
+
+        // Default threshold is 5: Mechanical Gaming Keyboard (qty 3) is Low Stock
+        // Mouse (qty 24) is In Stock
+        // Navigate to Settings
+        await tester.tap(find.byKey(const Key('nav_settings')));
+        await tester.pumpAndSettle();
+
+        // Change threshold to 25 via preset chip '25'
+        final preset25 = find.byKey(const Key('settings_preset_25'));
+        await tester.ensureVisible(preset25);
+        await tester.pumpAndSettle();
+        await tester.tap(preset25);
+        await tester.pumpAndSettle();
+
+        // Mouse (qty 24 <= 25) is now Low Stock!
+        // Verify Settings reflects new threshold
+        expect(find.text('≤ 25 units'), findsOneWidget);
+
+        // Switch to Products page: Mouse is now Low Stock (24)
+        await tester.tap(find.byKey(const Key('nav_products')));
+        await tester.pumpAndSettle();
+        expect(find.text('Low Stock (24)'), findsOneWidget);
+
+        // Switch to Dashboard page: Low stock badge is updated for Mouse
+        await tester.tap(find.byKey(const Key('nav_dashboard')));
+        await tester.pumpAndSettle();
+        expect(find.text('Low Stock (24)'), findsOneWidget);
       },
     );
   });
